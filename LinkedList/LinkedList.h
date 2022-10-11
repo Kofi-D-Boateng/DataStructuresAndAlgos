@@ -322,6 +322,33 @@ void LinkedList<T>::hasCycle()
 }
 
 template <typename T>
+bool LinkedList<T>::equals(const LinkedList<T> &other) const
+{
+    if (size_ != other.size_)
+        return false;
+
+    Node *currNode = head_;
+    Node *otherNode = other.head_;
+
+    while (currNode)
+    {
+        if (!otherNode)
+        {
+            throw new std::runtime_error("Error: Node from otherList is missing reference when compared to this.head_");
+        }
+        else
+        {
+            if (currNode->data != otherNode->data)
+                return false;
+            currNode = currNode->next;
+            otherNode = otherNode->next;
+        }
+    }
+
+    return true;
+}
+
+template <typename T>
 void LinkedList<T>::pushBack(const T &elem)
 {
     Node *newNode = new Node(elem);
