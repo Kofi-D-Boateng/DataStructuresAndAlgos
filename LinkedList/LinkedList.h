@@ -1,8 +1,11 @@
 
 /**
  * @file LinkedList.h
- *
  * @author Kofi Boateng
+ * @version 0.1
+ * @date 2022-10-02
+ *
+ *
  */
 
 #pragma once
@@ -99,7 +102,7 @@ public:
             popBack();
         }
         if (size_ != 0)
-            throw std::runtime_error("Error in clear: elements still exist on the heap... please check");
+            throw new std::runtime_error("Error in clear: elements still exist on the heap... please check");
     }
 
     // Checks for equality between two list.
@@ -314,7 +317,7 @@ void LinkedList<T>::hasCycle()
         haire = haire->next->next;
         // Checking for same memory address instead of data duplication.
         if (*tortoise == *haire)
-            throw std::runtime_error("Error: Cycle has been detected")
+            throw new std::runtime_error("Error: Cycle has been detected")
     }
 }
 
@@ -372,7 +375,7 @@ void LinkedList<T>::popFront()
         tail_ = nullptr;
         this->size_--;
         if (this->size_ != 0)
-            throw std::runtime_error("Error in popFront: a Node still exists on the heap. Check deallocation or how you are adding nodes to list.") return;
+            throw new std::runtime_error("Error in popFront: a Node still exists on the heap. Check deallocation or how you are adding nodes to list.") return;
     }
 
     Node *currHead = this->head_;
@@ -390,14 +393,13 @@ void LinkedList<T>::popBack()
     if (!head_)
         return;
 
-    if (!tail_->prev)
+    else if (!tail_->prev)
     {
         delete tail_;
         head_ = nullptr;
         tail_ = nullptr;
         this->size_--;
-        if (this->size_ != 0)
-            throw std::runtime_error("Error in popFront: a Node still exists on the heap. Check deallocation or how you are adding nodes to list.") return;
+        return;
     }
 
     Node *currTail = this->head_;
@@ -406,7 +408,6 @@ void LinkedList<T>::popBack()
     delete currTail;
     currTail = nullptr;
     this->size_--;
-    return;
 }
 
 template <typename T>
