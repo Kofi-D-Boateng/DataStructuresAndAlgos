@@ -365,7 +365,8 @@ void LinkedList<T>::pushBack(const T &elem)
         newNode->prev = oldTail;
         oldTail = newNode
     }
-    hasCycle() this->size_++;
+    hasCycle();
+    this->size_++;
 }
 
 template <typename T>
