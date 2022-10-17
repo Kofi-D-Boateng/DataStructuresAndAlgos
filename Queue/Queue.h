@@ -40,17 +40,10 @@ public:
         // the T data member variable.
         Node(const T &dataArg) : next(nullptr), prev(nullptr), data(dataArg) {}
 
-        // Note that although the Node class has its own copy constructor,
-        // when copying an actual LinkedList, we must perform manual copying
-        // by creating new nodes one at a time with the appropriate data,
-        // so that the pointer connections between nodes are actually correct
-        // for the copy of the list. Please refer to the copy constructor for
-        // the LinkedList class itself.
-
         // Copy constructor: Constructs this node to be identical to the other,
         // although this one does not exist at the same memory location as other,
         // and so anything that referred to other by address is NOT automatically
-        // referring to this node. (Please see the LinkedList class copy constructor.)
+        // referring to this node.
         Node(const Node &other) : next(other.next), prev(other.prev),
                                   data(other.data) {}
 
