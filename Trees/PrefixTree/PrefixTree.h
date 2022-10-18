@@ -56,11 +56,13 @@ private:
     // Root of the tree.
     Node *root;
     // A counter that keeps track of how many full words are currently in the tree.
-    int wordCount_;
+
+    int wordCount;
 
     // ClearTree is used to recursively remove elements from the
     // the tree during deallocation.
     void clearTree(Node *node);
+
 
     // A DFS function that will find a word in the tree "delete" each of its node representations.
     void wordRemoverDFS(Node *node, const int &index, const std::string &word);
