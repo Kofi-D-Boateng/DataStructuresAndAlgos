@@ -63,7 +63,6 @@ private:
     // the tree during deallocation.
     void clearTree(Node *node);
 
-
     // A DFS function that will find a word in the tree "delete" each of its node representations.
     void wordRemoverDFS(Node *node, const int &index, const std::string &word);
 
@@ -201,19 +200,22 @@ void PrefixTree<T>::wordBuilderHelperDFS(Node *node, std::string word, std::vect
         word.push_back(entry.first);
 
         // Check to see if we can add the word
+        // This is essentially our first base case, however
+        // We do not need to return just in case there
+        // Is a word that can still be built.
         if (node->endOfWord == true)
         {
             wordCollection.push_back(word);
         }
-        // This will loop through all the children of each node.
-        // This is will act as our base case. When empty we will
-        // commence backtracking. This loop will be passed if the
-        // children's map is empty.
-        int size = entry.second.size();
-        while (size > 0)
+
+        // This is our second base case. Since we are not returning on nullptrs,
+        // or any other flag, we will control how many times we recurse here.
+        // Essentially, If there are no more children to call on, we will not
+        // recurse anymore. The above case handles are nodes marked as complete
+        // words.
+        if (entry.second.size() > 0)
         {
             wordBuilderHelperDFS(entry.second, word, wordCollection);
-            size--;
         }
 
         // Backtracking part: Remove last character to form new word in
