@@ -85,7 +85,7 @@ public:
         *this = other;
     }
 
-    ~PriorityQueueADT<T>()
+    ~PriorityQueueADT()
     {
         clear();
     }
