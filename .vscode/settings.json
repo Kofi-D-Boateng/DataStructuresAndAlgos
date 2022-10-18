@@ -1,6 +1,11 @@
 {
   "files.associations": {
     "stdexcept": "cpp",
-    "queue": "cpp"
+    "queue": "cpp",
+    "istream": "cpp",
+    "iterator": "cpp",
+    "ostream": "cpp",
+    "xlocnum": "cpp",
+    "xstring": "cpp"
   }
 }
