@@ -110,8 +110,7 @@ private:
 
 public:
     // Gets the root of the tree
-    Node *
-    getRoot()
+    Node *getRoot()
     {
         return root;
     }
