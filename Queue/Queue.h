@@ -80,10 +80,10 @@ public:
     bool isEmpty() const { return !head_; }
 
     // Pushes element into the queue.
-    void push(const T &elem);
+    void enqueue(const T &elem);
 
     // Remove element from the front of the queue.
-    void pop();
+    void dequeue();
 
     // Delete all items in the list, leaving it empty
     void clear()
@@ -212,7 +212,7 @@ public:
 // =====================================================================================
 
 template <typename T>
-void QueueADT<T>::push(const T &elem)
+void QueueADT<T>::enqueue(const T &elem)
 {
     Node *newNode = new Node(elem);
 
@@ -232,7 +232,7 @@ void QueueADT<T>::push(const T &elem)
 }
 
 template <typename T>
-void QueueADT<T>::pop()
+void QueueADT<T>::dequeue()
 {
     if (!head_)
         return;
