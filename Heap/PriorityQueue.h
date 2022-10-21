@@ -1,5 +1,5 @@
 /**
- * @file BinarySearchTree.h
+ * @file PriortyQueue.h
  * @author Kofi Boateng
  * @version 0.1
  * @date 2022-10-17
@@ -11,7 +11,6 @@
 #include <iostream>  // for cout & cerr
 #include <stdexcept> // for runtime_error
 #include <ostream>   // for::ostream
-#include <cmath>     // Used to get the parent index when doing heapify (floor[index/2])
 
 // This is an implementation of the PriorityQueue Abstract Data Type. The underlying data structure
 // that this API will interact with is a minimum heap. This API will allow the end user to retrieve
@@ -22,15 +21,15 @@ class PriorityQueueADT
 {
 
 private:
-    // MinHeap
-    T minHeap[8] = {0};
+    // Pointer to the Min Heap.
+    T *minHeap;
 
     // Size of actual data stored within the heap.
-    int size_;
+    int size_ = {0};
 
     // Initial capacity of the array. This flag will
     // increase base on how many times we grow our array.
-    int capacity_;
+    int capacity_ = {8};
 
     // Grows the array when we have reached full capacity.
     // We will double the size of the array for every increase.
@@ -45,7 +44,7 @@ private:
     void _heapifyDown(const int &index);
 
     // Finds where the leaf elements are in the heap.
-    bool _isLeaf(const int &index);
+    bool _isLeaf(const int &index) const;
 
     // Returns the index of the minimum child;
     int _minChild(const int &index);
@@ -58,7 +57,7 @@ public:
     void insert(const T &element);
 
     // Removes the minimal element of the tree.
-    void removeMin() const;
+    void removeMin();
 
     // Returns a boolean signifying if the tree is
     // empty or not.
@@ -73,21 +72,21 @@ public:
     {
         if (size_ < 1)
         {
-            throw new std::runtime_error("Error: Cannot peek empty array. Please check where peek is called.")
+            throw new std::runtime_error("Error: Cannot peek empty array. Please check where peek is called.");
         }
         return minHeap[1];
     }
 
-    PriorityQueueADT() : minHeap(T arr[8] = {0}) size_(0), capacity_(8);
+    // Outputs the cotnents of the heap into a string format.
+    std::ostream &print(std::ostream &os) const;
 
-    PriorityQueueADT(const PriorityQueueADT<T> &other)
-    {
-        *this = other;
-    }
+    PriorityQueueADT() : minHeap(new T[8]), size_(0), capacity_(8) {}
+
+    PriorityQueueADT(const PriorityQueueADT<T> &other) : minHeap(other.minHeap), size_(other.size_), capacity_(other.capacity_) {}
 
     ~PriorityQueueADT()
     {
-        clear();
+        delete[] minHeap;
     }
 };
 // ======================================================================================================================================
@@ -99,16 +98,24 @@ void PriorityQueueADT<T>::_increaseCapacity()
 {
     // Double the capacity of the area and initial a working copy.
     int newSize = capacity_ * 2;
-    T copyArray[newSize] = {0};
+    T *copyArray = new T[newSize];
 
     // Copies over all elements into their correct spots
     for (int i = 1; i < size_; i++)
     {
         copyArray[i] = minHeap[i];
     }
-
+    T *oldHeap = minHeap;
     // Set the new min heap.
     minHeap = copyArray;
+
+    delete[] oldHeap;
+}
+
+template <typename T>
+bool PriorityQueueADT<T>::_isLeaf(const int &index) const
+{
+    return index == size_ || index == size_ - 1;
 }
 
 template <class T>
@@ -162,16 +169,16 @@ void PriorityQueueADT<T>::insert(const T &element)
     // follows: Left child = parents key(index) * 2, Right child = (parent's key(index) * 2) + 1.
     if (size_ == capacity_)
     {
-        _increaseCapacity()
+        _increaseCapacity();
     }
 
     // Increments the size key first before insertion.
     minHeap[++size_] = element;
-    _heapifyUp(size_)
+    _heapifyUp(size_);
 }
 
 template <typename T>
-void PriorityQueueADT<T>::removeMin() const
+void PriorityQueueADT<T>::removeMin()
 {
 
     if (size_ == 0)
@@ -186,4 +193,19 @@ void PriorityQueueADT<T>::removeMin() const
     size_--;
 
     _heapifyDown(1);
+}
+
+template <typename T>
+std::ostream &PriorityQueueADT<T>::print(std::ostream &os) const
+{
+    os << "[";
+
+    // Note that this works correctly for an empty list.
+    for (int i = 1; i < capacity_; i++)
+    {
+        os << "(" << minHeap[i] << ")";
+    }
+    os << "] \n";
+
+    return os;
 }

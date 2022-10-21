@@ -24,6 +24,7 @@ class Stack
 public:
     class Node
     {
+    public:
         // Pointer to the next node in the list
         Node *next;
         // Actual Data
@@ -44,7 +45,7 @@ public:
         {
             next = other.next;
             data = other.data;
-            return *this
+            return *this;
         }
         // Destructor: Although we don't seem to write anything here,
         // the members of the node class will have their own destructors
@@ -65,8 +66,8 @@ public:
     // Two list are equal if they have the same
     // length and same data at each position. O(n).
     bool equals(const Stack<T> &obj) const;
-    bool operator==(const Stack<T> &obj) const { return equals(obj) }
-    bool operator!=(const Stack<T> &obj) const {return !equals(obj)}
+    bool operator==(const Stack<T> &obj) const { return equals(obj); }
+    bool operator!=(const Stack<T> &obj) const { return !equals(obj); }
 
     // Returns a reference to the top element's data in the stack.
     // This can be used to change data directly within its respective node.
@@ -74,11 +75,11 @@ public:
     {
         if (!head_)
         {
-            throw std::runtime_error("Error: There is no head pointer for Stack")
+            throw std::runtime_error("Error: There is no head pointer for Stack");
         }
         else
         {
-            return head_->data
+            return head_->data;
         }
     }
     // (Reference above comments). Satisfies passes by refernece between through functions.
@@ -86,11 +87,11 @@ public:
     {
         if (!head_)
         {
-            throw new std::runtime_error("Error: There is no head pointer for Stack")
+            throw new std::runtime_error("Error: There is no head pointer for Stack");
         }
         else
         {
-            return head_->data
+            return head_->data;
         }
     }
     // Checks if the stack is empty.
@@ -110,7 +111,7 @@ public:
             pop();
         }
         if (size_ != 0)
-            throw new std::runtime_error("Error nodes from the stack still exist in heap memory.")
+            throw new std::runtime_error("Error nodes from the stack still exist in heap memory.");
     }
     // Output a string representation of the list.
     // This requires that the data type T supports stream output itself.
@@ -136,7 +137,7 @@ public:
             curr = curr->next;
         }
 
-        return *this
+        return *this;
     }
 
     // The copy constructor begins by constructing the default of Stack,
@@ -171,7 +172,7 @@ std::ostream &Stack<T>::print(std::ostream &os) const
         cur = cur->next;
     }
 
-    os << "]";
+    os << "] \n";
 
     return os;
 }
@@ -187,8 +188,9 @@ void Stack<T>::push(const T &dataArg)
     }
     else
     {
-        Node *oldHead = getHeadPtr();
+        Node *oldHead = head_;
         newData->next = oldHead;
+        head_ = newData;
     }
     size_++;
 }
@@ -202,10 +204,9 @@ void Stack<T>::pop()
     }
     else
     {
-        Node *oldHead = getHeadPtr();
-        Node *newHead = oldHead->next;
+        Node *oldHead = head_;
 
-        head_ = newHead;
+        head_ = oldHead->next;
 
         delete oldHead;
         oldHead->next = nullptr;
@@ -246,5 +247,5 @@ template <typename T>
 T &Stack<T>::peek() const
 {
 
-    return head_->data
+    return head_->data;
 }

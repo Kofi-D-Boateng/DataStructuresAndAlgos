@@ -90,7 +90,7 @@ public:
     {
         while (head_)
         {
-            pop();
+            dequeue();
         }
         if (size_ != 0)
             throw new std::runtime_error("Error in clear: elements still exist on the heap... please check");
@@ -100,8 +100,8 @@ public:
     // Two list are equal if they have the same
     // length and same data at each position. O(n).
     bool equals(const QueueADT<T> &obj) const;
-    bool operator==(const QueueADT<T> &obj) const { return equals(obj) }
-    bool operator!=(const QueueADT<T> &obj) const {return !equals(obj)}
+    bool operator==(const QueueADT<T> &obj) const { return equals(obj); }
+    bool operator!=(const QueueADT<T> &obj) const { return !equals(obj); }
 
     // Returns a reference to the actual front data item in the list.
     // This can be used to directly change the data in that node.
@@ -212,6 +212,25 @@ public:
 // =====================================================================================
 
 template <typename T>
+std::ostream &QueueADT<T>::print(std::ostream &os) const
+{
+    // List format will be [(1)(2)(3)], etc.
+    os << "[";
+
+    // Note that this works correctly for an empty list.
+    Node *cur = head_;
+    while (cur)
+    {
+        os << "(" << cur->data << ")";
+        cur = cur->next;
+    }
+
+    os << "]\n";
+
+    return os;
+}
+
+template <typename T>
 void QueueADT<T>::enqueue(const T &elem)
 {
     Node *newNode = new Node(elem);
@@ -223,12 +242,12 @@ void QueueADT<T>::enqueue(const T &elem)
     }
     else
     {
-        Node *oldTail = this->tail_;
-        oldTail->next = newNode;
-        newNode->prev = oldTail;
-        oldTail = newNode
+
+        tail_->next = newNode;
+        newNode->prev = tail_;
+        tail_ = newNode;
     }
-    this->size_++;
+    size_++;
 }
 
 template <typename T>
@@ -265,7 +284,7 @@ bool QueueADT<T>::equals(const QueueADT<T> &other) const
         }
         else if (thisNode->data != otherNode->data)
         {
-            return false
+            return false;
         }
         else
         {
