@@ -62,6 +62,17 @@ public:
             return *this;
         }
 
+        bool equals(const Node &other)
+        {
+            if (data == other.data)
+            {
+                return true;
+            }
+            return false;
+        };
+        bool &operator==(const Node &other) const { return equals(other); }
+        bool &operator!=(const Node &other) const { return !equals(other); }
+
         // Destructor: Although we don't seem to write anything here,
         // the members of the node class will have their own destructors
         // automatically called afterward.
@@ -109,8 +120,8 @@ public:
     // Two list are equal if they have the same
     // length and same data at each position. O(n).
     bool equals(const LinkedList<T> &obj) const;
-    bool operator==(const LinkedList<T> &obj) const { return equals(obj) }
-    bool operator!=(const LinkedList<T> &obj) const {return !equals(obj)}
+    bool operator==(const LinkedList<T> &obj) const { return equals(obj); }
+    bool operator!=(const LinkedList<T> &obj) const { return !equals(obj); }
 
     // Returns a reference to the actual front data item in the list.
     // This can be used to directly change the data in that node.
@@ -119,7 +130,7 @@ public:
     {
         if (!head_)
         {
-            throw std::runtime_error("front() called on empty LinkedList");
+            throw new std::runtime_error("front() called on empty LinkedList");
         }
         else
         {
@@ -137,7 +148,7 @@ public:
     {
         if (!head_)
         {
-            throw std::runtime_error("front() called on empty LinkedList");
+            throw new std::runtime_error("front() called on empty LinkedList");
         }
         else
         {
@@ -150,7 +161,7 @@ public:
     {
         if (!tail_)
         {
-            throw std::runtime_error("back() called on empty LinkedList");
+            throw new std::runtime_error("back() called on empty LinkedList");
         }
         else
         {
@@ -163,7 +174,7 @@ public:
     {
         if (!tail_)
         {
-            throw std::runtime_error("back() called on empty LinkedList");
+            throw new std::runtime_error("back() called on empty LinkedList");
         }
         else
         {
@@ -313,11 +324,11 @@ void LinkedList<T>::hasCycle()
     // While will run until the haire breaks the loop or cycle detection is confirmed
     while (tortoise && haire)
     {
-        tortoise = tortoise->next->;
+        tortoise = tortoise->next;
         haire = haire->next->next;
         // Checking for same memory address instead of data duplication.
-        if (*tortoise == *haire)
-            throw new std::runtime_error("Error: Cycle has been detected")
+        if (tortoise->data == haire->data)
+            throw new std::runtime_error("Error: Cycle has been detected");
     }
 }
 
@@ -355,17 +366,17 @@ void LinkedList<T>::pushBack(const T &elem)
 
     if (!head_)
     {
-        this->head_ = newNode;
-        this->tail_ = newNode;
+        head_ = newNode;
+        tail_ = newNode;
     }
     else
     {
-        Node *oldTail = this->tail_;
+        Node *oldTail = tail_;
         oldTail->next = newNode;
         newNode->prev = oldTail;
-        oldTail = newNode
+        tail_ = newNode;
     }
-    hasCycle();
+
     this->size_++;
 }
 
@@ -403,7 +414,8 @@ void LinkedList<T>::popFront()
         tail_ = nullptr;
         this->size_--;
         if (this->size_ != 0)
-            throw new std::runtime_error("Error in popFront: a Node still exists on the heap. Check deallocation or how you are adding nodes to list.") return;
+            throw new std::runtime_error("Error in popFront: a Node still exists on the heap. Check deallocation or how you are adding nodes to list.");
+        return;
     }
 
     Node *currHead = this->head_;
@@ -447,11 +459,11 @@ void LinkedList<T>::insertOrdered(const T &elem)
         return;
     }
 
-    Node *newNode = new (elem);
+    Node *newNode = new Node(elem);
     Node *currNode = this->head_;
     while (currNode && currNode->next && currNode->data < elem)
     {
-        currNode = currNode->next
+        currNode = currNode->next;
     }
 
     currNode->prev->next = newNode;
@@ -510,7 +522,7 @@ LinkedList<LinkedList<T>> LinkedList<T>::splitHalves() const
     }
 
     halves.pushBack(leftHalf);
-    havles.pushBack(rightHalf);
+    halves.pushBack(rightHalf);
 
     return halves;
 }
@@ -535,7 +547,7 @@ template <typename T>
 LinkedList<T> LinkedList<T>::merge(const LinkedList<T> &obj) const
 {
 
-    LinkedList<T> copy = *this, LinkedList<T> mergedList;
+    LinkedList<T> copy = *this, mergedList = nullptr;
     Node *copyNode = copy.getHeadPtr(), objNode = obj.getHeadPtr();
     int copyCount = 0, objCount = 0;
     while (copyCount < copy.size_ && objCount < obj.size_)
@@ -617,7 +629,7 @@ LinkedList<T> LinkedList<T>::mergeSortIterative() const
     }
 
     // The last element in the queue should be the merged list.
-    return queue.front()
+    return queue.front();
 }
 
 template <typename T>
@@ -627,5 +639,5 @@ LinkedList<T> LinkedList<T>::mergeSort(const std::string &type) const
     {
         return mergeSortRecursive();
     }
-    return mergeSortIterative()
+    return mergeSortIterative();
 }
