@@ -57,7 +57,7 @@ private:
     Node *root;
     // A counter that keeps track of how many full words are currently in the tree.
 
-    int wordCount;
+    int wordCount_;
 
     // ClearTree is used to recursively remove elements from the
     // the tree during deallocation.

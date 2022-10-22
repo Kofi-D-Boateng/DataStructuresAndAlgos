@@ -7,7 +7,6 @@
     "ostream": "cpp",
     "xlocnum": "cpp",
     "xstring": "cpp",
-    "iostream": "cpp",
     "list": "cpp",
     "atomic": "cpp",
     "bit": "cpp",
