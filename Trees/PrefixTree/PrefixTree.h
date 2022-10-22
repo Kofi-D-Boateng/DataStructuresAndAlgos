@@ -34,7 +34,7 @@ public:
         bool endOfWord;
 
         // Default constructor;
-        Node() : children(std::map<char, Node *>), endOfWord(false) {}
+        Node() : children(), endOfWord(false) {}
 
         // Copy constructor
         Node(const Node &other) : children(other.children), endOfWord(other.endOfWord) {}
@@ -45,7 +45,7 @@ public:
             children = other.children;
             endOfWord = other.endOfWord;
 
-            return *this
+            return *this;
         }
 
         // Deconstructor
@@ -73,7 +73,7 @@ private:
     // flag, in which case we will add the word to the collection. If the "True" flag is followed by
     // a non empty list, we will continue to loop through the children of that node as wel. Once the
     // children have all been exhausted we will then remove the character.
-    void wordBuilderHelperDFS(Node *node, std::string word, std::vector<std::string> wordCollection);
+    void wordBuilderHelperDFS(Node *node, std::string word, std::vector<std::string> *wordCollection);
 
     // A DFS helper function that will return whether the word is in the tree or not.
     bool wordSearchHelper(const int &index, Node *node, const std::string &word) const;
@@ -81,6 +81,9 @@ private:
 public:
     // Returns size of the tree;
     int size() const { return wordCount_; }
+
+    // Checks if the tree is empty or not
+    bool isEmpty() const { return wordCount_ == 0; }
 
     // Inserts a word into the tree.
     void insert(const std::string &word);
@@ -98,10 +101,14 @@ public:
     // Builds all the words that start with the suggested prefix.
     // A prefix can be a single character "A" or a regular prefix
     // such as "Re-", "En-", however a dash , "-", is not needed
-    // to signify the prefix.
-    std::vector<std::string> wordBuilder(const std::string &prefix) const;
+    // to signify the prefix. The function will return either a
+    // nullptr if there was not a word bank formed, or a
+    // collection of words formed from the prefix. It is the users
+    // responsibility to deallocate the pointer from memory. Call
+    // delete on your <variable>.
+    std::vector<std::string> *wordBuilder(std::string prefix);
 
-    PrefixTree() : root(nullptr) wordCount_(0) {}
+    PrefixTree() : root(new Node()), wordCount_(0) {}
 
     PrefixTree(const PrefixTree<T> &other) : PrefixTree()
     {
@@ -187,36 +194,31 @@ bool PrefixTree<T>::wordSearchHelper(const int &index, Node *node, const std::st
 }
 
 template <typename T>
-void PrefixTree<T>::wordBuilderHelperDFS(Node *node, std::string word, std::vector<std::string> wordCollection)
+void PrefixTree<T>::wordBuilderHelperDFS(Node *node, std::string word, std::vector<std::string> *wordCollection)
 {
-
+    // Check to see if we can add the word
+    // This is essentially our first base case, however
+    // We do not need to return just in case there
+    // Is a word that can still be built.
+    if (node->endOfWord == true)
+    {
+        wordCollection->push_back(word);
+    }
     // Index of the last character in word. This character should have been the trigger of the
     // previous call, so we can assume that this character exist in the tree. We will also use
     // this index to remove the character once all of its children have been exhausted.
-
-    for (auto const &entry : node->children)
+    for (auto entry : node->children)
     {
         // Push the character key onto the string (i.e. word = A-N, entry.fisrt = 'T', word = A-N-T).
         word.push_back(entry.first);
-
-        // Check to see if we can add the word
-        // This is essentially our first base case, however
-        // We do not need to return just in case there
-        // Is a word that can still be built.
-        if (node->endOfWord == true)
-        {
-            wordCollection.push_back(word);
-        }
 
         // This is our second base case. Since we are not returning on nullptrs,
         // or any other flag, we will control how many times we recurse here.
         // Essentially, If there are no more children to call on, we will not
         // recurse anymore. The above case handles are nodes marked as complete
         // words.
-        if (entry.second.size() > 0)
-        {
-            wordBuilderHelperDFS(entry.second, word, wordCollection);
-        }
+        Node *nextNode = entry.second;
+        wordBuilderHelperDFS(nextNode, word, wordCollection);
 
         // Backtracking part: Remove last character to form new word in
         // another stack frame.
@@ -234,22 +236,23 @@ void PrefixTree<T>::insert(const std::string &word)
     Node *currNode = root;
     for (char const &ch : word)
     {
-        if (root->children[ch])
+        if (currNode->children.find(ch) != currNode->children.end())
         {
-            currNode = root->children[ch];
+            currNode = currNode->children[ch];
         }
         else
         {
-            Node *newNode = Node();
-            root->children[ch] = newNode;
+            Node *newNode = new Node();
+            currNode->children[ch] = newNode;
             currNode = newNode;
         }
+        wordCount_++;
     }
     currNode->endOfWord = true;
 }
 
 template <typename T>
-bool PrefixTree<T>::search(const std::string &word) const { return wordSearchHelper(0, root); }
+bool PrefixTree<T>::search(const std::string &word) const { return wordSearchHelper(0, root, word); }
 
 template <typename T>
 void PrefixTree<T>::remove(const std::string &word)
@@ -259,19 +262,15 @@ void PrefixTree<T>::remove(const std::string &word)
         return;
     }
     wordRemoverDFS(root, 0, word);
+    wordCount_--;
 }
 
 template <typename T>
-std::vector<std::string> PrefixTree<T>::wordBuilder(const std::string &prefix) const
+std::vector<std::string> *PrefixTree<T>::wordBuilder(std::string prefix)
 {
 
-    // The bumper is the index at which we will recursively go through each child of the last
-    // character of the prefix to build the words
-    int bumper = prefix.length() - 1;
-
     // Collection of words
-    std::vector<std::string> wordCollection;
-
+    std::vector<std::string> *wordCollection = new std::vector<std::string>();
     Node *currNode = root;
 
     for (int runner = 0; runner < prefix.length(); runner++)
@@ -282,16 +281,19 @@ std::vector<std::string> PrefixTree<T>::wordBuilder(const std::string &prefix) c
         // empty listing
         if (!currNode->children[prefix[runner]])
         {
-            return wordCollection;
+            delete wordCollection;
+            return nullptr;
         }
         // Case 2:
-        // End of prefix and hit the bumper.
-        else if (currNode->children[prefix[runner]] && prefix == bumper && prefix[runner] == prefix[bumper])
+        // Runner is at the last character in the string.
+        else if (currNode->children[prefix[runner]] && runner + 1 == prefix.length())
         {
             Node *node = currNode->children[prefix[runner]];
-            for (auto const &entry : node->children)
+            for (auto entry : node->children)
             {
+                prefix.append(1, entry.first);
                 wordBuilderHelperDFS(entry.second, prefix, wordCollection);
+                prefix.pop_back();
             }
         }
         // Case 3:
