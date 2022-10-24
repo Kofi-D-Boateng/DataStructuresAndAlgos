@@ -1,8 +1,8 @@
 /**
- * @file BinarySearchTree.h
+ * @file AVLTree.h
  * @author Kofi Boateng
  * @version 0.1
- * @date 2022-11-02
+ * @date 2022-10-23
  *
  *
  */
@@ -11,14 +11,14 @@
 #include <iostream>  // for cout & cerr
 #include <stdexcept> // for runtime_error
 #include <ostream>   // for::ostream
-#include <queue>     // For BFS algorithms
+#include <queue>     //queue used for BFS algorithms
 
-// This is an implementation of a BinarySearchTree (BST). A BST is a type
-// of tree which follows the the tree invariant as well as every node to
-// the left of the parent node decreases and every node to right increases.
+// This is an implementation of a AVL Tree (Self-Balancing BST). a AVL Tree
+// follows the same princples of a Binary Search Tree, however upon insertion
+// and deletion, the tree will rebalance itself to keep the tree balanced.
 
 template <typename T>
-class BinarySearchTree
+class AVLBinaryTree
 {
 public:
     class Node
@@ -34,16 +34,26 @@ public:
         // The data of the node.
         T data;
 
+        // The height of the tree. (Refer to calculateHeight function).
+        int height;
+
+        // The balance factor of a node. If the node is a leaf node, its nullptr
+        // will constitute a -1 value. We will perform right - left calculations
+        // resulting in leaf nodes having a height of 0. A perfectly balanced
+        // tree will have a balance factor (BF) of 0. if the BF is BF > 0, then
+        // the tree is left heavy, and vice versa.
+        int balanceFactor;
+
         // Default constructor: This lets data be constructed by
         // the default constructor of the T type.
-        Node() : left(nullptr), right(nullptr) {}
+        Node() : left(nullptr), right(nullptr), height(0) {}
 
         // Argument constructor
-        Node(const T &dataArg) : left(nullptr), right(nullptr), data(dataArg) {}
+        Node(const T &dataArg) : left(nullptr), right(nullptr), data(dataArg), height(0) {}
 
         // Copy constructor: Constructs a new node to be identical to the node being
         // copied.
-        Node(const Node &other) : left(other.left), right(other.right), data(other.data) {}
+        Node(const Node &other) : left(other.left), right(other.right), data(other.data), height(other.height) {}
 
         // Copy assignment operator
         Node &operator=(const Node &other)
@@ -51,6 +61,7 @@ public:
             left = other.left;
             right = other.right;
             data = other.data;
+            height = other.height;
             return *this;
         }
 
@@ -59,6 +70,10 @@ public:
         // automatically called afterward.
         ~Node() {}
     };
+
+    // ====================================================================================
+    // Private variables and methods
+    // ====================================================================================
 
 private:
     Node *root;
@@ -104,9 +119,42 @@ private:
     // Refer to notes in the DFS version.
     Node *retrieveFurthestRightNodeBFS(Node *node);
 
-    // Returns the calculated height of the tree. A leaf node will be calculated with -1 height,
+    // Calculates the height of the tree recursively. A leaf node will be calculated with -1 height,
     // and we will subtract the height of the right side of a parent node from the left side.
     int calculateHeightOfTree(Node *node) const;
+
+    // Updates the height of a node
+    void updateHeight(Node *node);
+
+    // Performs a right rotation on the parent node. Right rotations are classified
+    // as rotating a stick formation in a left subtree. A stick formation will
+    // generate a +2 height when doing height calculations in the left subtree.
+    // This rotation will rotate the stick formation in a clock-wise formation
+    // to for a mountain, or a balanced subtree.
+    Node *rightRotation(Node *node);
+
+    // Performs a left rotation on the parent node. Left rotations are classified
+    // as rotating a stick formation in a right subtree. A stick formation will
+    // generate a -2 height when doing height calculations in the right subtree.
+    // This rotation will rotate the stick formation in a clock-wise formation
+    // to for a mountain, or a balanced subtree.
+    Node *leftRotation(Node *node);
+
+    // A function that indenties the formation of an elbow in a right subtree.
+    // This function performs a right rotation first on the leaf node and its
+    // parent to form a stick formation, and then a left rotation on the deep
+    // -est identifying node (where heigh == -2) and its child. An elbow in the
+    // right subtree will produce a height of -2 on the deepest identifer and its
+    // child will produce a height of +1 meaning there is only a left node available.
+    void rightLeftRotation(Node *node);
+
+    // A function that indenties the formation of an elbow in a left subtree.
+    // This function performs a left rotation first on the leaf node and its
+    // parent to form a stick formation, and then a right rotation on the deep
+    // -est identifying node (where heigh == +2) and its child. An elbow in the
+    // left subtree will produce a height of +2 on the deepest identifer and its
+    // child will produce a height of -1 meaning there is only a right node available.
+    void leftRightRotation(Node *node);
 
     // Prints the tree in order.
     void inorderTreeTraversalPrint(Node *node);
@@ -130,6 +178,9 @@ public:
     // Returns a boolean whether the exists or not
     bool isEmpty() const { return !root; }
 
+    // A function that will determine if the tree is balanced or not.
+    bool isBalanced() const;
+
     // Returns a boolean if the element is already in the tree.
     // We will not, for intents and purpose, allow duplicate
     // values in the tree. This fucntion will check for that as
@@ -144,8 +195,9 @@ public:
     // Type references wheter you use DFS or BFS Helper function.
     void remove(const T &element, std::string type);
 
-    // Checks if the tree is balanced
-    bool isBalanced();
+    // Checks if the tree is balanced, and if not performs a specific
+    // balancing algorithms based on the node's height.
+    void checkBalance(Node *node);
 
     // Deletes all the elements from the tree
     void clear()
@@ -162,18 +214,18 @@ public:
     // Checks for equality between two list.
     // Two list are equal if they have the same
     // length and same data at each position. O(n).
-    bool equals(const BinarySearchTree<T> &obj) const;
-    bool operator==(const BinarySearchTree<T> &obj) const { return equals(obj); }
-    bool operator!=(const BinarySearchTree<T> &obj) const { return !equals(obj); }
+    bool equals(const AVLBinaryTree<T> &obj) const;
+    bool operator==(const AVLBinaryTree<T> &obj) const { return equals(obj); }
+    bool operator!=(const AVLBinaryTree<T> &obj) const { return !equals(obj); }
 
     // Takes in a request (In,Pre, or Post) and then prints the tree in that order.
     std::ostream &print(std::ostream &os, const std::string &type);
 
     // Default Constructor: creates an empty tree
-    BinarySearchTree() : root(nullptr), treeSize(0) {}
+    AVLBinaryTree() : root(nullptr), treeSize(0) {}
 
     // We will run a BFS algorithm to copy nodes at each level
-    BinarySearchTree<T> &operator=(const BinarySearchTree<T> &other)
+    AVLBinaryTree<T> &operator=(const AVLBinaryTree<T> &other)
     {
 
         clear();
@@ -206,24 +258,28 @@ public:
 
     // The copy constructor begins by constructing the default LinkedList,
     // then it does copy assignment from the other list.
-    BinarySearchTree(const BinarySearchTree<T> &other) : BinarySearchTree()
+    AVLBinaryTree(const AVLBinaryTree<T> &other) : AVLBinaryTree()
     {
         *this = other;
     }
 
     // Deconstructor of the tree;
-    ~BinarySearchTree()
+    ~AVLBinaryTree()
     {
         clear();
     }
 };
 
-// ===================================================================================
+// =======================================================================================
 // Implementation Section
-// ===================================================================================
+// =======================================================================================
+
+// =========================================================
+// Private Helper Functions
+// =========================================================
 
 template <typename T>
-void BinarySearchTree<T>::inorderTreeTraversalPrint(Node *node)
+void AVLBinaryTree<T>::inorderTreeTraversalPrint(Node *node)
 {
     if (!node)
     {
@@ -236,7 +292,7 @@ void BinarySearchTree<T>::inorderTreeTraversalPrint(Node *node)
 }
 
 template <typename T>
-void BinarySearchTree<T>::preorderTreeTraversalPrint(Node *node)
+void AVLBinaryTree<T>::preorderTreeTraversalPrint(Node *node)
 {
     if (!node)
     {
@@ -248,7 +304,7 @@ void BinarySearchTree<T>::preorderTreeTraversalPrint(Node *node)
 }
 
 template <typename T>
-void BinarySearchTree<T>::postorderTreeTraversalPrint(Node *node)
+void AVLBinaryTree<T>::postorderTreeTraversalPrint(Node *node)
 {
     if (!node)
     {
@@ -260,7 +316,7 @@ void BinarySearchTree<T>::postorderTreeTraversalPrint(Node *node)
 }
 
 template <typename T>
-typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveFurthestRightNodeDFS(Node *node)
+typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::retrieveFurthestRightNodeDFS(Node *node)
 {
     if (!node->right->left && !node->right->right)
         return node;
@@ -269,7 +325,7 @@ typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveFurthestRightNo
 }
 
 template <typename T>
-typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveFurthestRightNodeBFS(Node *node)
+typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::retrieveFurthestRightNodeBFS(Node *node)
 {
     std::queue<Node *> queue;
     Node *parent = nullptr;
@@ -296,7 +352,7 @@ typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveFurthestRightNo
 
 // Helper function for Insert
 template <typename T>
-void BinarySearchTree<T>::DFSInsertHelper(const T &element, Node *node)
+void AVLBinaryTree<T>::DFSInsertHelper(const T &element, Node *node)
 {
 
     if (element > node->data && node->right)
@@ -324,7 +380,7 @@ void BinarySearchTree<T>::DFSInsertHelper(const T &element, Node *node)
 
 // Helper function for Insert
 template <typename T>
-void BinarySearchTree<T>::BFSInsertHelper(const T &element, Node *node)
+void AVLBinaryTree<T>::BFSInsertHelper(const T &element, Node *node)
 {
     std::queue<Node *> queue;
     queue.push(node);
@@ -359,7 +415,7 @@ void BinarySearchTree<T>::BFSInsertHelper(const T &element, Node *node)
 }
 
 template <typename T>
-void BinarySearchTree<T>::DFSRemoveHelper(const T &element, Node *node)
+void AVLBinaryTree<T>::DFSRemoveHelper(const T &element, Node *node)
 {
     if (!node->left && !node->right)
         return;
@@ -382,78 +438,105 @@ void BinarySearchTree<T>::DFSRemoveHelper(const T &element, Node *node)
 }
 
 template <typename T>
-int BinarySearchTree<T>::calculateHeightOfTree(Node *node) const
+int AVLBinaryTree<T>::calculateHeightOfTree(Node *node) const
 {
-    return !node ? -1 : calculateHeightOfTree(node->right) - calculateHeightOfTree(node->left);
+    return !node ? 0 : std::max(calculateHeightOfTree(node->right), calculateHeightOfTree(node->left)) + 1;
 }
 
-// DFS search algorithm that returns a pointer to a node on the heap.
 template <typename T>
-typename BinarySearchTree<T>::Node *BinarySearchTree<T>::binarySearchDFS(Node *node, const T &src)
+void AVLBinaryTree<T>::updateHeight(Node *node)
 {
-    if (!node)
-        return nullptr;
-    if (node->data == src)
-        return node;
-    if (src > node->data)
-        binarySearchDFS(node->right, src);
-    if (src < node->data)
-        binarySearchDFS(node->left, src);
-
-    return binarySearch(node, src);
+    int left = !node->left ? -1 : node->left->height;
+    int right = !node->right ? -1 : node->left->height;
+    node->height = std::max(left, right) + 1;
+    node->balanceFactor = right - left;
 }
 
-// BFS search algorithm that returns a pointer to a node on the heap.
-template <typename T>
-typename BinarySearchTree<T>::Node *BinarySearchTree<T>::binarySearchBFS(Node *node, const T &src)
-{
-    std::queue<Node *> queue;
-    queue.back(node);
+// ===============================
+// Height balancing algorithms
+// ===============================
 
-    while (!queue.empty())
+template <typename T>
+void AVLBinaryTree<T>::leftRightRotation(Node *node)
+{
+    node->left = leftRotation(node->left);
+    Node *temp = rightRotation(node);
+}
+
+template <typename T>
+void AVLBinaryTree<T>::rightLeftRotation(Node *node)
+{
+    node->right = leftRotation(node->right);
+    Node *temp = rightRotation(node);
+}
+
+template <typename T>
+typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::leftRotation(Node *node)
+{
+    Node *newParent = node->right;
+    node->right = newParent->left;
+    newParent->left = node;
+    updateHeight(node);
+    updateHeight(newParent);
+    return newParent;
+}
+
+template <typename T>
+typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::rightRotation(Node *node)
+{
+    Node *newParent = node->left;
+    node->left = newParent->right;
+    newParent->right = node;
+    updateHeight(node);
+    updateHeight(newParent);
+    return newParent;
+}
+
+template <typename T>
+void AVLBinaryTree<T>::checkBalance(Node *node)
+{
+    // Calculates the current node's height
+    updateHeight(node);
+
+    // If the balance factor == +2, then we know the tree is not balanced and is left heavy.
+    if (node->balanceFactor == -2)
     {
-        Node *currNode = queue.front();
-        queue.pop();
-        if (currNode->data == src)
+        // Check for specfic rotation type by grabbing the balance factor of left child
+        // Case One: Left-Left || Stick Formation
+        if (node->left->balanceFactor < 0)
         {
-            return currNode;
+            leftRotation(node);
         }
-        else if (src > currNode->data && currNode->right)
+        // Greater than 0 means we have a elbow and perform
+        // Case Two: Right-Left || Elbow Formation
+        else
         {
-            queue.push(currNode->right);
-        }
-        else if (src < currNode->data && currNode->left)
-        {
-            queue.push(currNode->left);
+            rightLeftRotation(node);
         }
     }
-
-    return nullptr;
+    // If the balance factor is == +2, then we know the tree is not balanced and is right heavy.
+    else if (node->balanceFactor == 2)
+    {
+        // Check for specfic rotation type by grabbing the balance factor of right child
+        // Case One: Right-Right || Stick Formation
+        if (node->left->balanceFactor > 0)
+        {
+            rightRotation(node);
+        }
+        // Greater than 0 means we have a elbow and perform
+        // Case Two: Left-Right || Elbow Formation
+        else
+        {
+            leftRightRotation(node);
+        }
+    }
 }
 
-template <typename T>
-void BinarySearchTree<T>::clearTree(Node *node)
-{
-    if (!node->left && !node->right)
-        return;
-
-    clearTree(node->left);
-    clearTree(node->right);
-
-    delete node;
-    node->left = nullptr;
-    node->right = nullptr;
-
-    treeSize--;
-    return;
-}
-
-// ===================================================================================================
+// =========================================================
 // Public Methods
-// ===================================================================================================
-
+// =========================================================
 template <typename T>
-void BinarySearchTree<T>::insert(const T &arg, std::string type)
+void AVLBinaryTree<T>::insert(const T &arg, std::string type)
 {
     if (!root)
     {
@@ -479,7 +562,7 @@ void BinarySearchTree<T>::insert(const T &arg, std::string type)
 }
 
 template <typename T>
-void BinarySearchTree<T>::remove(const T &element, std::string type)
+void AVLBinaryTree<T>::remove(const T &element, std::string type)
 {
     if (type != "DFS" || type != "BFS")
     {
@@ -672,7 +755,7 @@ void BinarySearchTree<T>::remove(const T &element, std::string type)
 }
 
 template <typename T>
-bool BinarySearchTree<T>::binarySearch(const T &src, std::string type)
+bool AVLBinaryTree<T>::binarySearch(const T &src, std::string type)
 {
     if (!src)
         return false;
@@ -692,7 +775,7 @@ bool BinarySearchTree<T>::binarySearch(const T &src, std::string type)
 }
 
 template <typename T>
-bool BinarySearchTree<T>::isBalanced()
+bool AVLBinaryTree<T>::isBalanced() const
 {
     if (!root)
     {
@@ -703,13 +786,13 @@ bool BinarySearchTree<T>::isBalanced()
 }
 
 template <typename T>
-bool BinarySearchTree<T>::contains(const T &element)
+bool AVLBinaryTree<T>::contains(const T &element)
 {
     return binarySearch(element, "DFS");
 }
 
 template <typename T>
-std::ostream &BinarySearchTree<T>::print(std::ostream &os, const std::string &type)
+std::ostream &AVLBinaryTree<T>::print(std::ostream &os, const std::string &type)
 {
     // List format will be [1-2-3], etc.
     if (!root)

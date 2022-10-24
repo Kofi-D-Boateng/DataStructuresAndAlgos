@@ -46,6 +46,10 @@
     "xlocale": "cpp",
     "xlocinfo": "cpp",
     "xmemory": "cpp",
-    "xstddef": "cpp"
+    "xstddef": "cpp",
+    "algorithm": "cpp",
+    "deque": "cpp",
+    "xtr1common": "cpp",
+    "xutility": "cpp"
   }
 }
