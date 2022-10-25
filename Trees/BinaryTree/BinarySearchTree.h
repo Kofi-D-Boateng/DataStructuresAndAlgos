@@ -79,7 +79,7 @@ private:
     Node *binarySearchBFS(Node *node, const T &src);
 
     // DFS helper for insertions
-    void DFSInsertHelper(const T &element, Node *node);
+    Node *DFSInsertHelper(const T &element, Node *node);
     // BFS helper for insertions
     void BFSInsertHelper(const T &element, Node *node);
 
@@ -260,6 +260,66 @@ void BinarySearchTree<T>::postorderTreeTraversalPrint(Node *node)
 }
 
 template <typename T>
+typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveParentNodeDFS(const T &element, Node *node)
+{
+    if (!node)
+    {
+        return nullptr;
+    }
+
+    if (node->left->data == element || node->right->data == element)
+    {
+        return node;
+    }
+
+    Node *value = nullptr;
+
+    if (element > node->data)
+    {
+        value = retrieveParentNodeDFS(element, node->right);
+    }
+    else
+    {
+        value = retrieveParentNodeDFS(element, node->left);
+    }
+
+    return value;
+}
+
+template <typename T>
+typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveParentNodeBFS(const T &element, Node *node)
+{
+    if (!node || !element)
+    {
+        return nullptr;
+    }
+
+    std::queue<Node *> queue;
+    queue.push(node);
+    Node *value = nullptr;
+    while (!queue.empty())
+    {
+        Node *temp = queue.front();
+        queue.pop();
+        if (temp->left->data == element || temp->right->data == element)
+        {
+            value = temp;
+            break;
+        }
+        else if (element > temp->data && temp->right)
+        {
+            queue.push(temp->right);
+        }
+        else if (element < temp->data && temp->left)
+        {
+            queue.push(temp->left);
+        }
+    }
+
+    return value;
+}
+
+template <typename T>
 typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveFurthestRightNodeDFS(Node *node)
 {
     if (!node->right->left && !node->right->right)
@@ -273,7 +333,7 @@ typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveFurthestRightNo
 {
     std::queue<Node *> queue;
     Node *parent = nullptr;
-    queue.back(node);
+    queue.push(node);
 
     while (!queue.empty())
     {
@@ -296,30 +356,24 @@ typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveFurthestRightNo
 
 // Helper function for Insert
 template <typename T>
-void BinarySearchTree<T>::DFSInsertHelper(const T &element, Node *node)
+typename BinarySearchTree<T>::Node *BinarySearchTree<T>::DFSInsertHelper(const T &element, Node *node)
 {
-
-    if (element > node->data && node->right)
+    if (!node)
     {
-        DFSInsertHelper(element, node->right);
+        treeSize++;
+        Node *newNode = new Node(element);
+        return newNode;
     }
-    if (element < node->data && node->left)
+    if (element > node->data)
     {
-        DFSInsertHelper(element, node->left);
-    }
-
-    Node *newNode = new Node(element);
-    if (newNode->data < node->data)
-    {
-        node->left = newNode;
+        node->right = DFSInsertHelper(element, node->right);
     }
     else
     {
-        node->right = newNode;
+        node->left = DFSInsertHelper(element, node->left);
     }
-    treeSize++;
 
-    return;
+    return node;
 }
 
 // Helper function for Insert
@@ -361,8 +415,31 @@ void BinarySearchTree<T>::BFSInsertHelper(const T &element, Node *node)
 template <typename T>
 void BinarySearchTree<T>::DFSRemoveHelper(const T &element, Node *node)
 {
-    if (!node->left && !node->right)
+    if (!node)
+    {
         return;
+    }
+
+    if (node->left->data == element)
+    {
+        treeSize--;
+        Node *nodeToDelete = node->left;
+        delete nodeToDelete;
+        nodeToDelete->left = nullptr;
+        nodeToDelete->right = nullptr;
+        node->left = nullptr;
+        return;
+    }
+    else if (node->right->data == element)
+    {
+        treeSize--;
+        Node *nodeToDelete = node->right;
+        delete nodeToDelete;
+        nodeToDelete->left = nullptr;
+        nodeToDelete->right = nullptr;
+        node->right = nullptr;
+        return;
+    }
 
     if (element > node->data)
     {
@@ -372,13 +449,49 @@ void BinarySearchTree<T>::DFSRemoveHelper(const T &element, Node *node)
     {
         DFSRemoveHelper(element, node->left);
     }
+}
 
-    delete node;
-    node->right = nullptr;
-    node->left = nullptr;
+template <typename T>
+void BinarySearchTree<T>::BFSRemoveHelper(const T &element, Node *node)
+{
+    if (!node)
+    {
+        return;
+    }
 
-    treeSize--;
-    return;
+    std::queue<Node *> queue;
+    queue.push(node);
+
+    while (!queue.empty())
+    {
+        Node *temp = queue.front();
+        queue.pop();
+        // Check for parent of the element;
+        if (temp->right->data == element)
+        {
+            delete temp->right;
+            temp->right->right = nullptr;
+            temp->right->left = nullptr;
+            treeSize--;
+            return;
+        }
+        else if (temp->left->data == element)
+        {
+            delete temp->left;
+            temp->left->right = nullptr;
+            temp->left->left = nullptr;
+            treeSize--;
+            return;
+        }
+        else if (element > temp->data && temp->right)
+        {
+            queue.push(temp->right);
+        }
+        else if (element < temp->data && temp->left)
+        {
+            queue.push(temp->left);
+        }
+    }
 }
 
 template <typename T>
@@ -392,15 +505,27 @@ template <typename T>
 typename BinarySearchTree<T>::Node *BinarySearchTree<T>::binarySearchDFS(Node *node, const T &src)
 {
     if (!node)
+    {
         return nullptr;
-    if (node->data == src)
-        return node;
-    if (src > node->data)
-        binarySearchDFS(node->right, src);
-    if (src < node->data)
-        binarySearchDFS(node->left, src);
+    }
 
-    return binarySearch(node, src);
+    if (node->data == src)
+    {
+        return node;
+    }
+
+    Node *value = nullptr;
+
+    if (src > node->data)
+    {
+        value = binarySearchDFS(node->right, src);
+    }
+    else
+    {
+        value = binarySearchDFS(node->left, src);
+    }
+
+    return value;
 }
 
 // BFS search algorithm that returns a pointer to a node on the heap.
@@ -408,7 +533,7 @@ template <typename T>
 typename BinarySearchTree<T>::Node *BinarySearchTree<T>::binarySearchBFS(Node *node, const T &src)
 {
     std::queue<Node *> queue;
-    queue.back(node);
+    queue.push(node);
 
     while (!queue.empty())
     {
@@ -465,7 +590,14 @@ void BinarySearchTree<T>::insert(const T &arg, std::string type)
     {
         if (type == "DFS")
         {
-            DFSInsertHelper(arg, root);
+            if (arg > root->data)
+            {
+                root->right = DFSInsertHelper(arg, root->right);
+            }
+            else
+            {
+                root->left = DFSInsertHelper(arg, root->left);
+            }
         }
         else if (type == "BFS")
         {
@@ -537,8 +669,11 @@ void BinarySearchTree<T>::remove(const T &element, std::string type)
                 // and remove it.
 
                 // Retreieves the parent of the biggest node in the left subtree of the node we are trying to remove.
-                Node *biggestLeftNodeParent = retrieveFurthestLeftNodeDFS(foundNode->left);
-
+                Node *biggestLeftNodeParent = retrieveFurthestRightNodeDFS(foundNode->left);
+                if (!biggestLeftNodeParent)
+                {
+                    throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
+                }
                 // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
                 // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
                 // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
@@ -674,19 +809,17 @@ void BinarySearchTree<T>::remove(const T &element, std::string type)
 template <typename T>
 bool BinarySearchTree<T>::binarySearch(const T &src, std::string type)
 {
-    if (!src)
-        return false;
-    if (!root && src)
-        return false;
-    if (type != "DFS" || type != "BFS")
+    if (!src || !root)
     {
-        throw new std::runtime_error("Incorrect type passed to binarySearch. Choose DFS or BFS");
+        return false;
     }
+
     if (type == "DFS")
     {
         Node *prospect = binarySearchDFS(root, src);
         return prospect != nullptr;
     }
+
     Node *prospect = binarySearchBFS(root, src);
     return prospect != nullptr;
 }
@@ -734,7 +867,7 @@ std::ostream &BinarySearchTree<T>::print(std::ostream &os, const std::string &ty
         std::cout << "[ERROR]: Could not identify type. Please check print method to see which types are accepted.";
     }
 
-    os << "]";
+    os << "]\n";
 
     return os;
 }
