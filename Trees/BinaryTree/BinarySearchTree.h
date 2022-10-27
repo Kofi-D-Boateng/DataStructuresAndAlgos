@@ -85,28 +85,46 @@ private:
 
     // DFS helper for removals
     void DFSRemoveHelper(const T &element, Node *node);
+
     // BFS helper for removals
     void BFSRemoveHelper(const T &element, Node *node);
+
+    // A helper function that is called if the element passed
+    // is not the root
+    void removeHelper(const T &element, Node *root, const std::string &type);
+
+    // A helper function that is called if the element passed
+    // is the root
+    void rootRemover(const T &element, Node *root, const std::string &type);
 
     // Retrieves the pointer to parent node of the node we are trying to remove.
     // We want to retrieve this node instead of the actual node itself in order to
     // manually update pointers correctly.
-    Node *retrieveParentNodeDFS(const T &element, Node *node);
+    Node *retrieveNodeDFS(const T &element, Node *node);
 
     // Refer to above comment in DFS version.
-    Node *retrieveParentNodeBFS(const T &element, Node *node);
+    Node *retrieveNodeBFS(const T &element, Node *node);
 
-    // A helper function that will retrieve the parent of the farthest node right
+    // A helper function that will retrieve the farthest node right
     // in the left subtree where the Ancestor node that calls the function will be swapped
     // with the child of the parent node.
     Node *retrieveFurthestRightNodeDFS(Node *node);
 
+    // Follows same principles as above function but finds the smallest element in the right
+    // subtree of a node by taking a step right and digging as far left as possible. This will
+    // still result in an element bigger than the node needing to be removed.
+    Node *retrieveFurthestLeftNodeDFS(Node *node);
+
     // Refer to notes in the DFS version.
     Node *retrieveFurthestRightNodeBFS(Node *node);
 
+    // Refer to notes in the DFS version.
+    Node *retrieveFurthestLeftNodeBFS(Node *node);
+
     // Returns the calculated height of the tree. A leaf node will be calculated with -1 height,
     // and we will subtract the height of the right side of a parent node from the left side.
-    int calculateHeightOfTree(Node *node) const;
+    int
+    calculateHeightOfTree(Node *node) const;
 
     // Prints the tree in order.
     void inorderTreeTraversalPrint(Node *node);
@@ -260,14 +278,14 @@ void BinarySearchTree<T>::postorderTreeTraversalPrint(Node *node)
 }
 
 template <typename T>
-typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveParentNodeDFS(const T &element, Node *node)
+typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveNodeDFS(const T &element, Node *node)
 {
     if (!node)
     {
         return nullptr;
     }
 
-    if (node->left->data == element || node->right->data == element)
+    if (node->data == element)
     {
         return node;
     }
@@ -276,18 +294,18 @@ typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveParentNodeDFS(c
 
     if (element > node->data)
     {
-        value = retrieveParentNodeDFS(element, node->right);
+        value = retrieveNodeDFS(element, node->right);
     }
     else
     {
-        value = retrieveParentNodeDFS(element, node->left);
+        value = retrieveNodeDFS(element, node->left);
     }
 
     return value;
 }
 
 template <typename T>
-typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveParentNodeBFS(const T &element, Node *node)
+typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveNodeBFS(const T &element, Node *node)
 {
     if (!node || !element)
     {
@@ -301,7 +319,7 @@ typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveParentNodeBFS(c
     {
         Node *temp = queue.front();
         queue.pop();
-        if (temp->left->data == element || temp->right->data == element)
+        if (temp->data == element)
         {
             value = temp;
             break;
@@ -322,36 +340,105 @@ typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveParentNodeBFS(c
 template <typename T>
 typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveFurthestRightNodeDFS(Node *node)
 {
-    if (!node->right->left && !node->right->right)
+    if (!node->right && !node->left)
+    {
         return node;
+    }
 
-    return retrieveFurthestRightNodeDFS(node->right);
+    Node *value = nullptr;
+    if (!node->right && node->left)
+    {
+        value = retrieveFurthestRightNodeDFS(node->left);
+    }
+    else
+    {
+        value = retrieveFurthestRightNodeDFS(node->right);
+    }
+    return value;
+}
+
+template <typename T>
+typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveFurthestLeftNodeDFS(Node *node)
+{
+    if (!node->left && !node->right)
+    {
+        return node;
+    }
+
+    Node *value = nullptr;
+    if (!node->left && node->right)
+    {
+        value = retrieveFurthestLeftNodeDFS(node->right);
+    }
+    else
+    {
+        value = retrieveFurthestLeftNodeDFS(node->left);
+    }
+    return value;
 }
 
 template <typename T>
 typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveFurthestRightNodeBFS(Node *node)
 {
     std::queue<Node *> queue;
-    Node *parent = nullptr;
+    Node *value = nullptr;
     queue.push(node);
 
     while (!queue.empty())
     {
         Node *currNode = queue.front();
         queue.pop();
-        if (!currNode->right->left && !currNode->left->right)
+        if (!currNode->left && !currNode->right)
         {
-            parent = currNode;
+            value = currNode;
             break;
         }
         else
         {
-            if (currNode->right)
+            if (!currNode->right && currNode->left)
+            {
+                queue.push(currNode->left);
+            }
+            else
+            {
                 queue.push(currNode->right);
+            }
         }
     }
 
-    return parent;
+    return value;
+}
+
+template <typename T>
+typename BinarySearchTree<T>::Node *BinarySearchTree<T>::retrieveFurthestLeftNodeBFS(Node *node)
+{
+    std::queue<Node *> queue;
+    Node *value = nullptr;
+    queue.push(node);
+
+    while (!queue.empty())
+    {
+        Node *currNode = queue.front();
+        queue.pop();
+        if (!currNode->left && !currNode->right)
+        {
+            value = currNode;
+            break;
+        }
+        else
+        {
+            if (!currNode->left && currNode->right)
+            {
+                queue.push(currNode->right);
+            }
+            else
+            {
+                queue.push(currNode->left);
+            }
+        }
+    }
+
+    return value;
 }
 
 // Helper function for Insert
@@ -420,34 +507,25 @@ void BinarySearchTree<T>::DFSRemoveHelper(const T &element, Node *node)
         return;
     }
 
-    if (node->left->data == element)
+    DFSRemoveHelper(element, node->left);
+    DFSRemoveHelper(element, node->right);
+    if (node->left && node->left->data == element)
     {
         treeSize--;
-        Node *nodeToDelete = node->left;
-        delete nodeToDelete;
-        nodeToDelete->left = nullptr;
-        nodeToDelete->right = nullptr;
+        delete node->left;
+        node->left->left = nullptr;
+        node->left->right = nullptr;
         node->left = nullptr;
         return;
     }
-    else if (node->right->data == element)
+    else if (node->right && node->right->data == element)
     {
         treeSize--;
-        Node *nodeToDelete = node->right;
-        delete nodeToDelete;
-        nodeToDelete->left = nullptr;
-        nodeToDelete->right = nullptr;
+        delete node->right;
+        node->right->left = nullptr;
+        node->right->right = nullptr;
         node->right = nullptr;
         return;
-    }
-
-    if (element > node->data)
-    {
-        DFSRemoveHelper(element, node->right);
-    }
-    else
-    {
-        DFSRemoveHelper(element, node->left);
     }
 }
 
@@ -467,29 +545,33 @@ void BinarySearchTree<T>::BFSRemoveHelper(const T &element, Node *node)
         Node *temp = queue.front();
         queue.pop();
         // Check for parent of the element;
-        if (temp->right->data == element)
+        if (temp->right)
         {
-            delete temp->right;
-            temp->right->right = nullptr;
-            temp->right->left = nullptr;
-            treeSize--;
-            return;
+            if (temp->right->data != element)
+            {
+                queue.push(temp->right);
+            }
+            else
+            {
+                delete temp->right;
+                temp->right = nullptr;
+                treeSize--;
+                break;
+            }
         }
-        else if (temp->left->data == element)
+        if (temp->left)
         {
-            delete temp->left;
-            temp->left->right = nullptr;
-            temp->left->left = nullptr;
-            treeSize--;
-            return;
-        }
-        else if (element > temp->data && temp->right)
-        {
-            queue.push(temp->right);
-        }
-        else if (element < temp->data && temp->left)
-        {
-            queue.push(temp->left);
+            if (temp->left->data != element)
+            {
+                queue.push(temp->left);
+            }
+            else
+            {
+                delete temp->left;
+                temp->left = nullptr;
+                treeSize--;
+                break;
+            }
         }
     }
 }
@@ -573,6 +655,138 @@ void BinarySearchTree<T>::clearTree(Node *node)
     return;
 }
 
+template <typename T>
+void BinarySearchTree<T>::removeHelper(const T &element, Node *root, const std::string &type)
+{
+    if (type == "DFS" || type == "dfs")
+    {
+        // Phase One: Find the parent node of the node designated for removal;
+        Node *foundNode = retrieveNodeDFS(element, root);
+        // Phase Two: Check which side we can swap the data with.
+
+        if (!foundNode->left && !foundNode->right)
+        {
+            // We have found a leaf node
+            DFSRemoveHelper(element, root);
+        }
+
+        else if (!foundNode->left)
+        {
+            Node *biggestRightNode = retrieveFurthestLeftNodeDFS(foundNode->right);
+            if (!biggestRightNode)
+            {
+                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
+            }
+            // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
+            // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
+            // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
+            // removal function on that element later.
+            T temp = biggestRightNode->data;
+            biggestRightNode->data = foundNode->data;
+            foundNode->data = temp;
+
+            DFSRemoveHelper(element, root);
+        }
+        // The right side contains the actuall element
+        else if (!foundNode->right)
+        {
+
+            Node *biggestLeftNode = retrieveFurthestRightNodeDFS(foundNode->left);
+
+            if (!biggestLeftNode)
+            {
+                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
+            }
+            // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
+            // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
+            // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
+            // removal function on that element later.
+            T temp = biggestLeftNode->data;
+            biggestLeftNode->data = foundNode->data;
+            foundNode->data = temp;
+
+            DFSRemoveHelper(element, root);
+        }
+        // Node has two children swap so you can swap from any side.
+        else
+        {
+            Node *biggestLeftNode = retrieveFurthestLeftNodeDFS(foundNode->right);
+
+            if (!biggestLeftNode)
+            {
+                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
+            }
+            // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
+            // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
+            // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
+            // removal function on that element later.
+            T temp = biggestLeftNode->data;
+            biggestLeftNode->data = foundNode->data;
+            foundNode->data = temp;
+
+            DFSRemoveHelper(element, root);
+        }
+    }
+    // Refer to comments in DFS as the same concepts apply here but we will implement most work with a queue instead
+    // instead of an inherited stack.
+    else if (type == "BFS" || type == "bfs")
+    {
+        Node *foundNode = retrieveNodeBFS(element, root);
+
+        if (!foundNode->left && !foundNode->right)
+        {
+            BFSRemoveHelper(element, root);
+        }
+        else if (!foundNode->right)
+        {
+            Node *biggestLeftNode = retrieveFurthestRightNodeBFS(foundNode->left);
+
+            if (!biggestLeftNode)
+            {
+                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
+            }
+            T temp = biggestLeftNode->data;
+            biggestLeftNode->data = foundNode->data;
+            foundNode->data = temp;
+
+            BFSRemoveHelper(element, root);
+        }
+        else if (!foundNode->left)
+        {
+            Node *biggestRightNode = retrieveFurthestLeftNodeBFS(foundNode->right);
+            if (!biggestRightNode)
+            {
+                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
+            }
+            T temp = biggestRightNode->data;
+            biggestRightNode->data = foundNode->data;
+            foundNode->data = temp;
+
+            BFSRemoveHelper(element, root);
+        }
+        else
+        {
+            Node *biggestRightNode = retrieveFurthestLeftNodeBFS(foundNode->right);
+            std::cout << "Node to remove: " << foundNode->data << std::endl;
+            std::cout << "Founded node: " << biggestRightNode->data << std::endl;
+            if (!biggestRightNode)
+            {
+                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
+            }
+            T temp = biggestRightNode->data;
+            biggestRightNode->data = foundNode->data;
+            foundNode->data = temp;
+            print(std::cout, "in");
+            BFSRemoveHelper(element, root);
+        }
+    }
+    else
+    {
+        std::cout << "MADE IT" << std::endl;
+        throw new std::runtime_error("Error in remove: incorrect type offered. Choose between DFS and BFS");
+    }
+}
+
 // ===================================================================================================
 // Public Methods
 // ===================================================================================================
@@ -613,196 +827,20 @@ void BinarySearchTree<T>::insert(const T &arg, std::string type)
 template <typename T>
 void BinarySearchTree<T>::remove(const T &element, std::string type)
 {
-    if (type != "DFS" || type != "BFS")
+    if (!root)
     {
-        throw new std::runtime_error("Error in remove: incorrect type offered. Choose between DFS and BFS");
+        return;
     }
-    if (type == "DFS")
+
+    else if (treeSize == 1)
     {
-        // Phase One: Find the parent node of the node designated for removal;
-        Node *parent = retrieveParentNodeDFS(element, root);
-        // Phase One-B: Edit the correct side of the tree
-        if (parent->left && parent->left->data == element)
-        {
-            // Phase Two: Removal of node. (Bound by 3 cases).
-            Node *foundNode = parent->left;
-            // Case 1 (Leaf Node || No children)
-            if (!foundNode->left || !foundNode->right)
-            {
-                DFSRemoveHelper(element, root);
-                parent->left = nullptr;
-            }
-            // Case 2 (Single Child)
-            // Note: Each node should be regarded as a sub-tree and the parent node it
-            // comes from as a root node itself. Therefore, even if you swap the left
-            // or right of a sub-tree pointer, the pointer will hold data that will still
-            // keep the BST invariant when compared to the parent from which it came from.
-            // In case of a root modification, we would still hold the invariant or the pointer
-            // will refer to a nullptr.
-            else if (!foundNode->left)
-            {
-                // Refer to note.
-                parent->left = foundNode->right;
-                delete foundNode;
-                foundNode->left = nullptr;
-                foundNode->right = nullptr;
-
-                treeSize--;
-            }
-            else if (!foundNode->right)
-            {
-                parent->left = foundNode->left;
-                delete foundNode;
-                foundNode->left = nullptr;
-                foundNode->right = nullptr;
-
-                treeSize--;
-            }
-            // Case 3 (Two Children)
-            else
-            {
-                // Two choice:
-                // Choice One: Dig far right into the sub tree and swap the found node with the
-                // the biggest node found in its subtree (will end up being a leaf node) and call
-                // Remove.
-                // Choice Two: Get the biggest smallest sub-node in the left tree (will end up being a leaf node),
-                // and remove it.
-
-                // Retreieves the parent of the biggest node in the left subtree of the node we are trying to remove.
-                Node *biggestLeftNodeParent = retrieveFurthestRightNodeDFS(foundNode->left);
-                if (!biggestLeftNodeParent)
-                {
-                    throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
-                }
-                // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
-                // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
-                // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
-                // removal function on that element later.
-                T temp = biggestLeftNodeParent->right->data;
-                biggestLeftNodeParent->right->data = foundNode->data;
-                foundNode->data = temp;
-
-                DFSRemoveHelper(biggestLeftNodeParent->right->data, root);
-            }
-        }
-        // The right side contains the actuall element
-        else if (parent->right && parent->right->data == element)
-        {
-            // Phase Two: Removal of node. (Bound by 3 cases).
-            Node *foundNode = parent->right;
-            // Case 1 (Leaf Node || No children)
-            if (!foundNode->left || !foundNode->right)
-            {
-                DFSRemoveHelper(element, root);
-                parent->left = nullptr;
-            }
-            // Case 2 (Single Child)
-            // Note: Each node should be regarded as a sub-tree and the parent node it
-            // comes from as a root node itself. Therefore, even if you swap the left
-            // or right of a sub-tree pointer, the pointer will hold data that will still
-            // keep the BST invariant when compared to the parent from which it came from.
-            // In case of a root modification, we would still hold the invariant or the pointer
-            // will refer to a nullptr.
-            else if (!foundNode->left)
-            {
-                // Refer to note.
-                parent->left = foundNode->right;
-                delete foundNode;
-                foundNode->left = nullptr;
-                foundNode->right = nullptr;
-
-                treeSize--;
-            }
-            else if (!foundNode->right)
-            {
-                parent->left = foundNode->left;
-                delete foundNode;
-                foundNode->left = nullptr;
-                foundNode->right = nullptr;
-
-                treeSize--;
-            }
-            // Case 3 (Two Children)
-            else
-            {
-                // Two choice:
-                // Choice One: Dig far right into the sub tree and swap the found node with the
-                // the biggest node found in its subtree (will end up being a leaf node) and call
-                // Remove.
-                // Choice Two: Get the biggest smallest sub-node in the left tree (will end up being a leaf node),
-                // and remove it.
-
-                // Retreieves the parent of the biggest node in the left subtree of the node we are trying to remove.
-                Node *biggestLeftNodeParent = retrieveFurthestRightNodeDFS(foundNode->left);
-                if (!biggestLeftNodeParent)
-                {
-                    throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
-                }
-                // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
-                // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
-                // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
-                // removal function on that element later.
-                T temp = biggestLeftNodeParent->right->data;
-                biggestLeftNodeParent->right->data = foundNode->data;
-                foundNode->data = temp;
-
-                DFSRemoveHelper(biggestLeftNodeParent->right->data, root);
-            }
-        }
-        else
-        {
-            throw new std::runtime_error("Error in removal: Neither child of parent was able to perform removal. Check implementation");
-        }
+        delete root;
+        treeSize--;
     }
-    // Refer to comments in DFS as the same concepts apply here but we will implement most work with a queue instead
-    // instead of an inherited stack.
+
     else
     {
-        Node *parent = retrieveParentNodeBFS(element, root);
-
-        if (parent->left && parent->left->data == element)
-        {
-            Node *foundNode = parent->left;
-
-            if (!foundNode->left || !foundNode->right)
-            {
-                BFSRemoveHelper(element, root);
-                parent->left = nullptr;
-                // delete foundNode;
-                // foundNode = nullptr;
-            }
-            else if (!foundNode->left)
-            {
-                parent->left = foundNode->right;
-                delete foundNode;
-                foundNode->left = nullptr;
-                foundNode->right = nullptr;
-
-                treeSize--;
-            }
-            else if (!foundNode->right)
-            {
-                parent->left = foundNode->left;
-                delete foundNode;
-                foundNode->left = nullptr;
-                foundNode->right = nullptr;
-
-                treeSize--;
-            }
-            else
-            {
-                Node *biggestLeftNodeParent = retrieveFurthestRightNodeBFS(foundNode->left);
-                if (!biggestLeftNodeParent)
-                {
-                    throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
-                }
-                T temp = biggestLeftNodeParent->right->data;
-                biggestLeftNodeParent->right->data = foundNode->data;
-                foundNode->data = temp;
-
-                BFSRemoveHelper(biggestLeftNodeParent->right->data, root);
-            }
-        }
+        removeHelper(element, root, type);
     }
 }
 
