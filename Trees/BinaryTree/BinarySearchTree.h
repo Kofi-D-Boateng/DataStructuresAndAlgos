@@ -123,8 +123,7 @@ private:
 
     // Returns the calculated height of the tree. A leaf node will be calculated with -1 height,
     // and we will subtract the height of the right side of a parent node from the left side.
-    int
-    calculateHeightOfTree(Node *node) const;
+    int calculateHeightOfTree(Node *node) const;
 
     // Prints the tree in order.
     void inorderTreeTraversalPrint(Node *node);
@@ -156,11 +155,11 @@ public:
 
     // Inserts an element into the tree
     // Type references wheter you use DFS or BFS Helper function.
-    void insert(const T &element, std::string type);
+    void insert(const T &element, const std::string &type);
 
     // Removes an element from the tree
     // Type references wheter you use DFS or BFS Helper function.
-    void remove(const T &element, std::string type);
+    void remove(const T &element, const std::string &type);
 
     // Checks if the tree is balanced
     bool isBalanced();
@@ -792,7 +791,7 @@ void BinarySearchTree<T>::removeHelper(const T &element, Node *root, const std::
 // ===================================================================================================
 
 template <typename T>
-void BinarySearchTree<T>::insert(const T &arg, std::string type)
+void BinarySearchTree<T>::insert(const T &arg, const std::string &type)
 {
     if (!root)
     {
@@ -825,7 +824,7 @@ void BinarySearchTree<T>::insert(const T &arg, std::string type)
 }
 
 template <typename T>
-void BinarySearchTree<T>::remove(const T &element, std::string type)
+void BinarySearchTree<T>::remove(const T &element, const std::string &type)
 {
     if (!root)
     {
@@ -908,4 +907,57 @@ std::ostream &BinarySearchTree<T>::print(std::ostream &os, const std::string &ty
     os << "]\n";
 
     return os;
+}
+
+template <typename T>
+bool BinarySearchTree<T>::equals(const BinarySearchTree<T> &other) const
+{
+    if (!root || size() != other.size())
+    {
+        return false;
+    }
+
+    std::queue<Node *> queueThis;
+    std::queue<Node *> queueOther;
+    queueThis.push(root);
+    queueOther.push(other.root);
+
+    while (!queueThis.empty())
+    {
+        if (queueOther.empty())
+        {
+            return false;
+        }
+        Node *thisNode = queueThis.front();
+        Node *otherNode = queueOther.front();
+        queueThis.pop();
+        queueOther.pop();
+
+        if (thisNode->data != otherNode->data)
+        {
+            return false;
+        }
+
+        if (thisNode->left)
+        {
+            queueThis.push(thisNode->left);
+        }
+
+        if (thisNode->right)
+        {
+            queueThis.push(thisNode->right);
+        }
+
+        if (otherNode->left)
+        {
+            queueOther.push(thisNode->left);
+        }
+
+        if (otherNode->right)
+        {
+            queueOther.push(otherNode->right);
+        }
+    }
+
+    return queueOther.empty() && queueThis.empty();
 }
