@@ -13,7 +13,8 @@
 #include <stdexcept> // for runtime_error
 #include <ostream>   // for::ostream
 #include <vector>    // used to hold pointers to new nodes.
-#include <queue>
+#include <queue>     // used for BFS algorithms.
+#include <stack>     // used for clearing the tree.
 
 // This is the implementation of a M-ary tree. An M-ary tree is tree graph that has at least two child nodes
 // and up to M child nodes, where M is the number of children each node can have. For example, A binary tree
@@ -35,21 +36,19 @@ public:
 
         // a flag to keep track of pointers added to the array. If the flag is 0, then we have
         // reached a leaf node.
-        int valueSize_;
 
         // Data held by the node.
         T data_;
 
-        TreeNode() : order_(2), valueSize_(0) {}
-        TreeNode(int &order) : order_(order), valueSize_(0) {}
-        TreeNode(int &order, const T &value) : order_(order), valueSize_(0), data_(value) {}
+        TreeNode() : order_(2) {}
+        TreeNode(int &order) : order_(order) {}
+        TreeNode(int &order, const T &value) : order_(order), data_(value) {}
 
-        TreeNode(const TreeNode &other) : order_(other.order_), valueSize_(other.valueSize_), values_(other.values_), data_(other.data_) {}
+        TreeNode(const TreeNode &other) : order_(other.order_), values_(other.values_), data_(other.data_) {}
 
         TreeNode &operator=(const TreeNode &other)
         {
             order_ = other.order_;
-            valueSize_ = other.valueSize_;
             values_ = other.values_;
             data_ = other.data_;
             return *this;
@@ -79,10 +78,6 @@ private:
 
     // A helper function that will return a pointer to an element
     // in the tree or return false.
-    TreeNode *searchHelperDFS(TreeNode *node, const T &element);
-
-    // A helper function that will return a pointer to an element
-    // in the tree or return false.
     TreeNode *searchHelperBFS(TreeNode *node, const T &element);
 
     // A helper function that is called if the element passed
@@ -101,19 +96,17 @@ private:
     // Prints the tree post order.
     void postorderTreeTraversalPrint(TreeNode *node);
 
+    // Finds a node that can replace the node being removed. This node will most likely be a leaf node
+    // in the subtree of the node being removed so that we can put the contents of the removed node in
+    // the leaf node.
+    TreeNode *findReplacerDFS(TreeNode *node);
+
     // helper function that will create a node and insert it into
     // childrens area if possible.
     bool insertionHelperDFS(const T &element, TreeNode *node);
 
-    // helper function that will create a node and insert it into
-    // childrens area if possible.
-    void insertionHelperBFS(const T &element, TreeNode *node);
-
     // helper function that will remove a node from the tree if possible.
     bool removalHelperDFS(const T &element, TreeNode *node);
-
-    // helper function that will remove a node from the tree if possible.
-    void removalHelperBFS(const T &element, TreeNode *node);
 
 public:
     // Returns the pointer to the root of the tree.
@@ -129,15 +122,14 @@ public:
     // We will not, for intents and purpose, allow duplicate
     // values in the tree. This fucntion will check for that as
     // a by product.
-    bool contains(const T &element, const std::string &type);
-
+    bool contains(const T &element);
     // Inserts an element into the tree
     // Type references wheter you use DFS or BFS Helper function.
-    void insert(const T &element, const std::string &type);
+    void insert(const T &element);
 
     // Removes an element from the tree
     // Type references wheter you use DFS or BFS Helper function.
-    void remove(const T &element, const std::string &type);
+    void remove(const T &element);
 
     // Returns either a reference to the element or a nullptr.
     TreeNode &retrieve(const T &element) const;
@@ -148,8 +140,11 @@ public:
         if (root)
             clearTree(root);
 
+        std::cout << "CURRENT SIZE: " << size_ << std::endl;
+        print(std::cout, "pre");
         if (size_ != 0)
         {
+            std::cout << "FOUND IT" << std::endl;
             throw new std::runtime_error("Error in clear: elements still exist on the heap... please check");
         }
     }
@@ -181,7 +176,7 @@ public:
             queue.pop();
             insert(curr->data_, "DFS");
             int size{};
-            while (size < curr->valueSize_)
+            while (size < curr->values_.size())
             {
                 queue.push(curr->values_[size++]);
             }
@@ -208,14 +203,14 @@ void Tree<T>::inorderTreeTraversalPrint(TreeNode *node)
     {
         return;
     }
-    int midpoint = node->valueSize_ / 2;
+    int midpoint = node->values_.size() / 2;
     for (int i{}; i < midpoint; i++)
     {
         // "'LEFT' half recursion"
         inorderTreeTraversalPrint(node->values_[i]);
     }
     std::cout << node->data_ << "-";
-    for (int i{midpoint}; i < node->valueSize_; i++)
+    for (int i{midpoint}; i < node->values_.size(); i++)
     {
         // "'RIGHT' half recursion"
         inorderTreeTraversalPrint(node->values_[i]);
@@ -230,13 +225,13 @@ void Tree<T>::preorderTreeTraversalPrint(TreeNode *node)
         return;
     }
     std::cout << node->data_ << "-";
-    int midpoint = node->valueSize_ / 2;
+    int midpoint = node->values_.size() / 2;
     for (int i{}; i < midpoint; i++)
     {
         // "'LEFT' half recursion"
         inorderTreeTraversalPrint(node->values_[i]);
     }
-    for (int i{midpoint}; i < node->valueSize_; i++)
+    for (int i{midpoint}; i < node->values_.size(); i++)
     {
         // "'RIGHT' half recursion"
         inorderTreeTraversalPrint(node->values_[i]);
@@ -250,18 +245,44 @@ void Tree<T>::postorderTreeTraversalPrint(TreeNode *node)
     {
         return;
     }
-    int midpoint = node->valueSize_ / 2;
+    int midpoint = node->values_.size() / 2;
     for (int i{}; i < midpoint; i++)
     {
         // "'LEFT' half recursion"
         inorderTreeTraversalPrint(node->values_[i]);
     }
-    for (int i{midpoint}; i < node->valueSize_; i++)
+    for (int i{midpoint}; i < node->values_.size(); i++)
     {
         // "'RIGHT' half recursion"
         inorderTreeTraversalPrint(node->values_[i]);
     }
     std::cout << node->data_ << "-";
+}
+
+template <typename T>
+typename Tree<T>::TreeNode *Tree<T>::findReplacerDFS(TreeNode *node)
+{
+    if (!node)
+    {
+        return nullptr;
+    }
+
+    if (node->values_.size() == 0)
+    {
+        return node;
+    }
+
+    TreeNode *value = nullptr;
+    for (TreeNode *n : node->values_)
+    {
+        value = findReplacerDFS(n);
+        if (value)
+        {
+            break;
+        }
+    }
+
+    return value;
 }
 
 template <typename T>
@@ -272,52 +293,21 @@ bool Tree<T>::insertionHelperDFS(const T &element, TreeNode *node)
         return false;
     }
 
-    if (node->valueSize_ < node->order_)
+    if (node->values_.size() < node->order_)
     {
         TreeNode *newNode = new TreeNode(order_, element);
         node->values_.push_back(newNode);
-        node->valueSize_++;
         return true;
     }
 
-    for (int i{}; i < node->valueSize_; i++)
+    for (int i{}; i < node->values_.size(); i++)
     {
         if (insertionHelperDFS(element, node->values_[i]))
-        {
-            return true;
-        }
-        else
         {
             break;
         }
     }
     return false;
-}
-
-template <typename T>
-void Tree<T>::insertionHelperBFS(const T &element, TreeNode *root)
-{
-    std::queue<TreeNode *> queue;
-
-    queue.push(root);
-
-    while (!queue.empty())
-    {
-        TreeNode *curr = queue.front();
-        queue.pop();
-        if (curr->valueSize_ < curr->order_)
-        {
-            TreeNode *newNode = new TreeNode(order_, element);
-            curr->values_.push_back(newNode);
-            curr->valueSize_++;
-            break;
-        }
-
-        for (int i{}; i < curr->valueSize_; i++)
-        {
-            queue.push(curr->values_[i]);
-        }
-    }
 }
 
 template <typename T>
@@ -325,71 +315,36 @@ bool Tree<T>::removalHelperDFS(const T &element, TreeNode *node)
 {
     if (node->data_ == element)
     {
-        return true;
+        // If null, then it is a leaf node and we can do a regular removal;
+        if (node->values_.size() <= 0)
+        {
+            delete node;
+            return true;
+        }
+        else
+        {
+            std::cout << "START OF REPLACEMENT FIND" << std::endl;
+            int midpoint = node->values_.size() / 2;
+            TreeNode *replacementNode = findReplacerDFS(node->values_[midpoint]);
+            std::cout << "REPLACEMENT DFS: " << replacementNode->data_ << std::endl;
+            // Swap element with the leaf node and call remove on element again.
+            T temp = node->data_;
+            node->data_ = replacementNode->data_;
+            replacementNode->data_ = temp;
+            return removalHelperDFS(element, root);
+        }
     }
 
-    for (int i{}; i < node->valueSize_; i++)
+    for (int i{}; i < node->values_.size(); i++)
     {
         if (removalHelperDFS(element, node->values_[i]))
         {
-            node->valueSize_--;
-            delete node->values_[i];
-            node->values_[i] = nullptr;
+            auto location = node->values_.begin() + i;
+            node->values_.erase(location);
             break;
         }
     }
     return false;
-}
-template <typename T>
-void Tree<T>::removalHelperBFS(const T &element, TreeNode *node)
-{
-    std::queue<TreeNode *> queue;
-
-    queue.push(root);
-
-    while (!queue.empty())
-    {
-        TreeNode *curr = queue.front();
-        queue.pop();
-
-        for (int i{}; i < curr->valueSize_; i++)
-        {
-            if (curr->values_[i]->data_ == element)
-            {
-                TreeNode *nodeToDelete = curr->values_[i];
-                delete nodeToDelete;
-                nodeToDelete = nullptr;
-                curr->values_[i] = nullptr;
-                break;
-            }
-            queue.push(curr->values_[i]);
-        }
-    }
-}
-
-template <typename T>
-typename Tree<T>::TreeNode *Tree<T>::searchHelperDFS(TreeNode *node, const T &element)
-{
-    if (!node)
-    {
-        return nullptr;
-    }
-
-    if (node->data_ == element)
-    {
-        return node;
-    }
-
-    for (int i{}; i < node->valueSize_; i++)
-    {
-        TreeNode *value = searchHelperDFS(node->values_[i], element);
-        if (value != nullptr)
-        {
-            return value;
-        }
-    }
-
-    return nullptr;
 }
 
 template <typename T>
@@ -408,7 +363,7 @@ typename Tree<T>::TreeNode *Tree<T>::searchHelperBFS(TreeNode *node, const T &el
             return curr;
         }
 
-        for (int i{}; i < curr->valueSize_; i++)
+        for (int i{}; i < curr->values_.size(); i++)
         {
             queue.push(curr->values_[i]);
         }
@@ -420,20 +375,30 @@ typename Tree<T>::TreeNode *Tree<T>::searchHelperBFS(TreeNode *node, const T &el
 template <typename T>
 void Tree<T>::clearTree(TreeNode *node)
 {
-    // We have reached a leaf and will delete node.
-    if (node->valueSize_ <= 0)
+    std::stack<TreeNode *> stack;
+    std::queue<TreeNode *> queue;
+    queue.push(node);
+    while (!queue.empty())
     {
-        delete node;
-        node = nullptr;
-        return;
+        TreeNode *curr = queue.front();
+        queue.pop();
+        stack.push(curr);
+        for (TreeNode *n : curr->values_)
+        {
+            queue.push(n);
+        }
     }
 
-    for (int i{}; i < node->valueSize_; i++)
+    while (!stack.empty())
     {
-        // iterate all the way until you reach the end of a list
-        clearTree(node->values_[i]);
-        // delete the node the base case has reached from the vector list.
-        node->values_[i] = nullptr;
+        TreeNode *nodeToDelete = stack.top();
+        stack.pop();
+
+        // We can safely call delete on all nodes because we are going
+        // bottom up on deletes, therefore all previous nodes will
+        // already be deleted.
+        delete nodeToDelete;
+        size_--;
     }
 }
 
@@ -442,7 +407,7 @@ void Tree<T>::clearTree(TreeNode *node)
 // ==================================================================================================================
 
 template <typename T>
-void Tree<T>::insert(const T &element, const std::string &type)
+void Tree<T>::insert(const T &element)
 {
     if (!root)
     {
@@ -452,25 +417,13 @@ void Tree<T>::insert(const T &element, const std::string &type)
     }
     else
     {
-        if (type == "DFS" || type == "dfs")
-        {
-            insertionHelperDFS(element, getRoot());
-            size_++;
-        }
-        else if (type == "BFS" || type == "BFS")
-        {
-            insertionHelperBFS(element, getRoot());
-            size_++;
-        }
-        else
-        {
-            throw new std::runtime_error("[ERROR]: Please specficy between Depth-First (DFS|dfs) or Breadth-Firsth (BFS|bfs).");
-        }
+        insertionHelperDFS(element, getRoot());
+        size_++;
     }
 }
 
 template <typename T>
-void Tree<T>::remove(const T &element, const std::string &type)
+void Tree<T>::remove(const T &element)
 {
     if (!root)
     {
@@ -478,20 +431,8 @@ void Tree<T>::remove(const T &element, const std::string &type)
     }
     else
     {
-        if (type == "DFS" || type == "dfs")
-        {
-            removalHelperDFS(element, getRoot());
-            size_--;
-        }
-        else if (type == "BFS" || type == "BFS")
-        {
-            removalHelperBFS(element, getRoot());
-            size_--;
-        }
-        else
-        {
-            throw new std::runtime_error("[ERROR]: Please specficy between Depth-First (DFS|dfs) or Breadth-Firsth (BFS|bfs).");
-        }
+        removalHelperDFS(element, getRoot());
+        size_--;
     }
 }
 
@@ -527,12 +468,12 @@ bool Tree<T>::equals(const Tree<T> &other) const
         int sizeThis{};
         int sizeOther{};
 
-        while (sizeThis < thisNode->valueSize_)
+        while (sizeThis < thisNode->values_.size())
         {
             queueThis.push(thisNode->values_[sizeThis++]);
         }
 
-        while (sizeOther < otherNode->valueSize_)
+        while (sizeOther < otherNode->values_.size())
         {
             queueOther.push(otherNode->values_[sizeOther++]);
         }
@@ -549,25 +490,13 @@ typename Tree<T>::TreeNode &Tree<T>::retrieve(const T &element) const
         return nullptr;
     }
 
-    return searchHelperDFS(element, root);
+    return searchHelperBFS(element, root);
 }
 
 template <typename T>
-bool Tree<T>::contains(const T &element, const std::string &type)
+bool Tree<T>::contains(const T &element)
 {
-    if (type == "DFS" || type == "dfs")
-    {
-        return searchHelperDFS(getRoot(), element) != nullptr;
-    }
-    else if (type == "BFS" || type == "bfs")
-    {
-        return searchHelperBFS(getRoot(), element) != nullptr;
-    }
-    else
-    {
-        std::runtime_error("[ERROR]: Please specficy between Depth-First (DFS|dfs) or Breadth-Firsth (BFS|bfs).");
-    }
-    return false;
+    return searchHelperBFS(getRoot(), element) != nullptr;
 }
 
 template <typename T>
