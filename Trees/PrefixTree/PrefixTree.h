@@ -13,13 +13,13 @@
 #include <ostream>   // for::ostream
 #include <map>       // used to map characters to nodes
 #include <vector>    // used to return multiple words built from prefixes
+#include <queue>
 
 // This is an implementation of a Prefix Tree, or Trie Tree. A Prefix tree
 // is a type of tree that is used to store alphabetical words into nodes.
 // Common use cases for Prefix trees are autocorrect and problems that deal
 // storing and looking up words.
 
-template <typename T>
 class PrefixTree
 {
 public:
@@ -73,7 +73,7 @@ private:
     // flag, in which case we will add the word to the collection. If the "True" flag is followed by
     // a non empty list, we will continue to loop through the children of that node as wel. Once the
     // children have all been exhausted we will then remove the character.
-    void wordBuilderHelperDFS(Node *node, std::string word, std::vector<std::string> *wordCollection);
+    void wordBuilderHelperDFS(Node *node, std::string &word, std::vector<std::string> &wordCollection);
 
     // A DFS helper function that will return whether the word is in the tree or not.
     bool wordSearchHelper(const int &index, Node *node, const std::string &word) const;
@@ -98,24 +98,29 @@ public:
     // will return without removing anything.
     void remove(const std::string &word);
 
+    // Checks for equality between two list.
+    // Two list are equal if they have the same
+    // length and same data at each position. O(n).
+    bool equals(const PrefixTree &obj) const;
+    bool operator==(const PrefixTree &obj) const { return equals(obj); }
+    bool operator!=(const PrefixTree &obj) const { return !equals(obj); }
+
     // Builds all the words that start with the suggested prefix.
     // A prefix can be a single character "A" or a regular prefix
     // such as "Re-", "En-", however a dash , "-", is not needed
-    // to signify the prefix. The function will return either a
-    // nullptr if there was not a word bank formed, or a
-    // collection of words formed from the prefix. It is the users
-    // responsibility to deallocate the pointer from memory. Call
-    // delete on your <variable>.
-    std::vector<std::string> *wordBuilder(std::string prefix);
+    // to signify the prefix. The function will either fill the
+    // passed vector with a collection of words or there will be
+    // no words present.
+    void wordBuilder(std::string &prefix, std::vector<std::string> &wordCollection);
 
     PrefixTree() : root(new Node()), wordCount_(0) {}
 
-    PrefixTree(const PrefixTree<T> &other) : PrefixTree()
+    PrefixTree(const PrefixTree &other) : PrefixTree()
     {
         *this = other;
     }
 
-    PrefixTree<T> &operator=(const PrefixTree<T> &other)
+    PrefixTree &operator=(const PrefixTree &other)
     {
         root = other.root;
         wordCount_ = other.wordCount_;
@@ -132,8 +137,7 @@ public:
 // Helper Functions
 // ===========================================================================================================
 
-template <typename T>
-void PrefixTree<T>::wordRemoverDFS(Node *node, const int &index, const std::string &word)
+void PrefixTree::wordRemoverDFS(Node *node, const int &index, const std::string &word)
 {
     // Instead of deallocating the word from the tree, we will change the flag to false,
     // signifying the word no longer "exists in the tree".
@@ -155,8 +159,7 @@ void PrefixTree<T>::wordRemoverDFS(Node *node, const int &index, const std::stri
     wordRemoverDFS(node->children[word[index]], index + 1, word);
 }
 
-template <typename T>
-bool PrefixTree<T>::wordSearchHelper(const int &index, Node *node, const std::string &word) const
+bool PrefixTree::wordSearchHelper(const int &index, Node *node, const std::string &word) const
 {
     Node *currNode = node;
 
@@ -193,8 +196,7 @@ bool PrefixTree<T>::wordSearchHelper(const int &index, Node *node, const std::st
     return currNode->endOfWord;
 }
 
-template <typename T>
-void PrefixTree<T>::wordBuilderHelperDFS(Node *node, std::string word, std::vector<std::string> *wordCollection)
+void PrefixTree::wordBuilderHelperDFS(Node *node, std::string &word, std::vector<std::string> &wordCollection)
 {
     // Check to see if we can add the word
     // This is essentially our first base case, however
@@ -202,7 +204,7 @@ void PrefixTree<T>::wordBuilderHelperDFS(Node *node, std::string word, std::vect
     // Is a word that can still be built.
     if (node->endOfWord == true)
     {
-        wordCollection->push_back(word);
+        wordCollection.push_back(word);
     }
     // Index of the last character in word. This character should have been the trigger of the
     // previous call, so we can assume that this character exist in the tree. We will also use
@@ -217,8 +219,7 @@ void PrefixTree<T>::wordBuilderHelperDFS(Node *node, std::string word, std::vect
         // Essentially, If there are no more children to call on, we will not
         // recurse anymore. The above case handles are nodes marked as complete
         // words.
-        Node *nextNode = entry.second;
-        wordBuilderHelperDFS(nextNode, word, wordCollection);
+        wordBuilderHelperDFS(entry.second, word, wordCollection);
 
         // Backtracking part: Remove last character to form new word in
         // another stack frame.
@@ -230,8 +231,7 @@ void PrefixTree<T>::wordBuilderHelperDFS(Node *node, std::string word, std::vect
 // Public Methods
 // ============================================================================================================
 
-template <typename T>
-void PrefixTree<T>::insert(const std::string &word)
+void PrefixTree::insert(const std::string &word)
 {
     Node *currNode = root;
     for (char const &ch : word)
@@ -246,16 +246,14 @@ void PrefixTree<T>::insert(const std::string &word)
             currNode->children[ch] = newNode;
             currNode = newNode;
         }
-        wordCount_++;
     }
     currNode->endOfWord = true;
+    wordCount_++;
 }
 
-template <typename T>
-bool PrefixTree<T>::search(const std::string &word) const { return wordSearchHelper(0, root, word); }
+bool PrefixTree::search(const std::string &word) const { return wordSearchHelper(0, root, word); }
 
-template <typename T>
-void PrefixTree<T>::remove(const std::string &word)
+void PrefixTree::remove(const std::string &word)
 {
     if (!root)
     {
@@ -265,13 +263,15 @@ void PrefixTree<T>::remove(const std::string &word)
     wordCount_--;
 }
 
-template <typename T>
-std::vector<std::string> *PrefixTree<T>::wordBuilder(std::string prefix)
+void PrefixTree::wordBuilder(std::string &prefix, std::vector<std::string> &wordCollection)
 {
 
-    // Collection of words
-    std::vector<std::string> *wordCollection = new std::vector<std::string>();
     Node *currNode = root;
+
+    if (prefix.length() <= 0)
+    {
+        return;
+    }
 
     for (int runner = 0; runner < prefix.length(); runner++)
     {
@@ -281,8 +281,7 @@ std::vector<std::string> *PrefixTree<T>::wordBuilder(std::string prefix)
         // empty listing
         if (!currNode->children[prefix[runner]])
         {
-            delete wordCollection;
-            return nullptr;
+            break;
         }
         // Case 2:
         // Runner is at the last character in the string.
@@ -303,6 +302,69 @@ std::vector<std::string> *PrefixTree<T>::wordBuilder(std::string prefix)
             currNode = currNode->children[prefix[runner]];
         }
     }
+}
 
-    return wordCollection;
+bool PrefixTree::equals(const PrefixTree &other) const
+{
+    if (!root || size() != other.size())
+    {
+        return false;
+    }
+
+    std::queue<Node *> queueThis;
+    std::queue<Node *> queueOther;
+    queueThis.push(root);
+    queueOther.push(other.root);
+
+    while (!queueThis.empty())
+    {
+        if (queueOther.empty())
+        {
+            return false;
+        }
+        Node *thisNode = queueThis.front();
+        Node *otherNode = queueOther.front();
+        queueThis.pop();
+        queueOther.pop();
+
+        std::queue<char> charThis;
+        std::queue<char> charOther;
+
+        if (thisNode->endOfWord != otherNode->endOfWord)
+        {
+            return false;
+        }
+
+        for (auto const &[character, node] : thisNode->children)
+        {
+            queueThis.push(node);
+            charThis.push(character);
+        }
+
+        for (auto const &[character, node] : otherNode->children)
+        {
+            queueOther.push(node);
+            charOther.push(character);
+        }
+
+        while (!charThis.empty() && !charOther.empty())
+        {
+            if (charThis.front() != charOther.front())
+            {
+                return false;
+            }
+            else
+            {
+                charThis.pop();
+                charOther.pop();
+            }
+        }
+
+        if (charThis.size() != charOther.size())
+        {
+            return false;
+        }
+    }
+
+    return queueOther.empty() && queueThis.empty();
 }

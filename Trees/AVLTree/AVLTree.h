@@ -12,6 +12,7 @@
 #include <stdexcept> // for runtime_error
 #include <ostream>   // for::ostream
 #include <queue>     //queue used for BFS algorithms
+#include <cmath>
 
 // This is an implementation of a AVL Tree (Self-Balancing BST). a AVL Tree
 // follows the same princples of a Binary Search Tree, however upon insertion
@@ -46,14 +47,14 @@ public:
 
         // Default constructor: This lets data be constructed by
         // the default constructor of the T type.
-        Node() : left(nullptr), right(nullptr), height(0) {}
+        Node() : left(nullptr), right(nullptr), height(0), balanceFactor(0) {}
 
         // Argument constructor
-        Node(const T &dataArg) : left(nullptr), right(nullptr), data(dataArg), height(0) {}
+        Node(const T &dataArg) : left(nullptr), right(nullptr), data(dataArg), height(0), balanceFactor(0) {}
 
         // Copy constructor: Constructs a new node to be identical to the node being
         // copied.
-        Node(const Node &other) : left(other.left), right(other.right), data(other.data), height(other.height) {}
+        Node(const Node &other) : left(other.left), right(other.right), data(other.data), height(other.height), balanceFactor(other.balanceFactor) {}
 
         // Copy assignment operator
         Node &operator=(const Node &other)
@@ -62,6 +63,7 @@ public:
             right = other.right;
             data = other.data;
             height = other.height;
+            balanceFactor = other.balanceFactor;
             return *this;
         }
 
@@ -95,25 +97,17 @@ private:
 
     // DFS helper for insertions
     Node *DFSInsertHelper(const T &element, Node *node);
-    // BFS helper for insertions
-    void BFSInsertHelper(const T &element, Node *node);
 
     // DFS helper for removals
     void DFSRemoveHelper(const T &element, Node *node);
-    // BFS helper for removals
-    void BFSRemoveHelper(const T &element, Node *node);
 
     // A helper function that is called if the element passed
     // is not the root
-    void removeHelper(const T &element, Node *root, const std::string &type);
+    void removeHelper(const T &element, Node *root);
 
-    // A helper function that is called if the element passed
-    // is the root
-    void rootRemover(const T &element, Node *root, const std::string &type);
-
-    // Retrieves the pointer to parent node of the node we are trying to remove.
-    // We want to retrieve this node instead of the actual node itself in order to
-    // manually update pointers correctly.
+    // Retrieves the pointer to the node we are trying to remove.
+    // We will use this pointer to find the In-order predecessor
+    // and swap data.
     Node *retrieveNodeDFS(const T &element, Node *node);
 
     // Refer to above comment in DFS version.
@@ -162,7 +156,7 @@ private:
     // -est identifying node (where heigh == -2) and its child. An elbow in the
     // right subtree will produce a height of -2 on the deepest identifer and its
     // child will produce a height of +1 meaning there is only a left node available.
-    void rightLeftRotation(Node *node);
+    Node *rightLeftRotation(Node *node);
 
     // A function that indenties the formation of an elbow in a left subtree.
     // This function performs a left rotation first on the leaf node and its
@@ -170,7 +164,7 @@ private:
     // -est identifying node (where heigh == +2) and its child. An elbow in the
     // left subtree will produce a height of +2 on the deepest identifer and its
     // child will produce a height of -1 meaning there is only a right node available.
-    void leftRightRotation(Node *node);
+    Node *leftRightRotation(Node *node);
 
     // Prints the tree in order.
     void inorderTreeTraversalPrint(Node *node);
@@ -205,15 +199,15 @@ public:
 
     // Inserts an element into the tree
     // Type references wheter you use DFS or BFS Helper function.
-    void insert(const T &element, std::string type);
+    void insert(const T &element);
 
     // Removes an element from the tree
     // Type references wheter you use DFS or BFS Helper function.
-    void remove(const T &element, std::string type);
+    void remove(const T &element);
 
     // Checks if the tree is balanced, and if not performs a specific
     // balancing algorithms based on the node's height.
-    void checkBalance(Node *node);
+    Node *checkBalanceAndUpdate(Node *node);
 
     // Deletes all the elements from the tree
     void clear()
@@ -293,6 +287,22 @@ public:
 // =========================================================
 // Private Helper Functions
 // =========================================================
+
+template <typename T>
+void AVLBinaryTree<T>::clearTree(Node *node)
+{
+    if (!node)
+    {
+        return;
+    }
+
+    clearTree(node->left);
+    clearTree(node->right);
+
+    delete node;
+    node->right = nullptr;
+    node->left = nullptr;
+}
 
 template <typename T>
 typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::retrieveNodeDFS(const T &element, Node *node)
@@ -550,6 +560,63 @@ typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::retrieveFurthestLeftNodeBFS(N
     return value;
 }
 
+template <typename T>
+int AVLBinaryTree<T>::calculateHeightOfTree(Node *node) const
+{
+    int left = !node->left ? -1 : node->left->height;
+    int right = !node->right ? -1 : node->right->height;
+    return right - left;
+}
+
+template <typename T>
+void AVLBinaryTree<T>::updateHeight(Node *node)
+{
+    int left = !node->left ? -1 : node->left->height;
+    int right = !node->right ? -1 : node->right->height;
+    node->height = std::max(left, right) + 1;
+    node->balanceFactor = right - left;
+}
+
+template <typename T>
+typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::checkBalanceAndUpdate(Node *node)
+{
+    // If the balance factor == +2, then we know the tree is not balanced and is left heavy.
+    if (node->balanceFactor == -2)
+    {
+        std::cout << "[IN PROGRESS]: Performing reorganizing of a left subtree....." << std::endl;
+        // Check for specfic rotation type by grabbing the balance factor of left child
+        // Case One: Left-Left || Stick Formation
+        if (node->left->balanceFactor <= 0)
+        {
+            node = rightRotation(node);
+        }
+        // Greater than 0 means we have a elbow and perform
+        // Case Two: Right-Left || Elbow Formation
+        else
+        {
+            node = leftRightRotation(node);
+        }
+    }
+    // If the balance factor is == +2, then we know the tree is not balanced and is right heavy.
+    else if (node->balanceFactor == 2)
+    {
+        std::cout << "[IN PROGRESS]: Performing reorganizing of a right subtree....." << std::endl;
+        // Check for specfic rotation type by grabbing the balance factor of right child
+        // Case One: Right-Right || Stick Formation
+        if (node->right->balanceFactor >= 0)
+        {
+            node = leftRotation(node);
+        }
+        // Greater than 0 means we have a elbow and perform
+        // Case Two: Left-Right || Elbow Formation
+        else
+        {
+            node = rightLeftRotation(node);
+        }
+    }
+    return node;
+}
+
 // Helper function for Insert
 template <typename T>
 typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::DFSInsertHelper(const T &element, Node *node)
@@ -564,49 +631,19 @@ typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::DFSInsertHelper(const T &elem
     if (element > node->data)
     {
         node->right = DFSInsertHelper(element, node->right);
+        // Calculates the current node's height
+        updateHeight(node->right);
+        node->right = checkBalanceAndUpdate(node->right);
     }
     else
     {
         node->left = DFSInsertHelper(element, node->left);
+        // Calculates the current node's height
+        updateHeight(node->left);
+        node->left = checkBalanceAndUpdate(node->left);
     }
-
-    return node;
-}
-
-// Helper function for Insert
-template <typename T>
-void AVLBinaryTree<T>::BFSInsertHelper(const T &element, Node *node)
-{
-    std::queue<Node *> queue;
-    queue.push(node);
-
-    while (!queue.empty())
-    {
-        Node *currNode = queue.front();
-        queue.pop();
-        if (element < currNode->data && currNode->left)
-        {
-            queue.push(currNode->left);
-        }
-        else if (element > currNode->data && currNode->right)
-        {
-            queue.push(currNode->right);
-        }
-        else
-        {
-            Node *newNode = new Node(element);
-
-            if (newNode->data < currNode->data)
-            {
-                currNode->left = newNode;
-            }
-            else
-            {
-                currNode->right = newNode;
-            }
-            treeSize++;
-        }
-    }
+    updateHeight(node);
+    return checkBalanceAndUpdate(node);
 }
 
 template <typename T>
@@ -639,84 +676,22 @@ void AVLBinaryTree<T>::DFSRemoveHelper(const T &element, Node *node)
     }
 }
 
-template <typename T>
-void AVLBinaryTree<T>::BFSRemoveHelper(const T &element, Node *node)
-{
-    if (!node)
-    {
-        return;
-    }
-
-    std::queue<Node *> queue;
-    queue.push(node);
-
-    while (!queue.empty())
-    {
-        Node *temp = queue.front();
-        queue.pop();
-        // Check for parent of the element;
-        if (temp->right)
-        {
-            if (temp->right->data != element)
-            {
-                queue.push(temp->right);
-            }
-            else
-            {
-                delete temp->right;
-                temp->right = nullptr;
-                treeSize--;
-                break;
-            }
-        }
-        if (temp->left)
-        {
-            if (temp->left->data != element)
-            {
-                queue.push(temp->left);
-            }
-            else
-            {
-                delete temp->left;
-                temp->left = nullptr;
-                treeSize--;
-                break;
-            }
-        }
-    }
-}
-
-template <typename T>
-int AVLBinaryTree<T>::calculateHeightOfTree(Node *node) const
-{
-    return !node ? -1 : std::max(calculateHeightOfTree(node->right), calculateHeightOfTree(node->left)) + 1;
-}
-
-template <typename T>
-void AVLBinaryTree<T>::updateHeight(Node *node)
-{
-    int left = !node->left ? -1 : node->left->height;
-    int right = !node->right ? -1 : node->left->height;
-    node->height = std::max(left, right) + 1;
-    node->balanceFactor = right - left;
-}
-
 // ===============================
 // Height balancing algorithms
 // ===============================
 
 template <typename T>
-void AVLBinaryTree<T>::leftRightRotation(Node *node)
+typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::leftRightRotation(Node *node)
 {
     node->left = leftRotation(node->left);
-    Node *temp = rightRotation(node);
+    return rightRotation(node);
 }
 
 template <typename T>
-void AVLBinaryTree<T>::rightLeftRotation(Node *node)
+typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::rightLeftRotation(Node *node)
 {
-    node->right = leftRotation(node->right);
-    Node *temp = rightRotation(node);
+    node->right = rightRotation(node->right);
+    return leftRotation(node);
 }
 
 template <typename T>
@@ -742,290 +717,99 @@ typename AVLBinaryTree<T>::Node *AVLBinaryTree<T>::rightRotation(Node *node)
 }
 
 template <typename T>
-void AVLBinaryTree<T>::checkBalance(Node *node)
+void AVLBinaryTree<T>::removeHelper(const T &element, Node *node)
 {
-    // Calculates the current node's height
-    updateHeight(node);
-
-    // If the balance factor == +2, then we know the tree is not balanced and is left heavy.
-    if (node->balanceFactor == -2)
+    // Phase One: Find the parent node of the node designated for removal;
+    Node *foundNode = retrieveNodeDFS(element, node);
+    // Phase Two: Check which side we can swap the data with.
+    if (!foundNode->left && !foundNode->right)
     {
-        // Check for specfic rotation type by grabbing the balance factor of left child
-        // Case One: Left-Left || Stick Formation
-        if (node->left->balanceFactor < 0)
-        {
-            leftRotation(node);
-        }
-        // Greater than 0 means we have a elbow and perform
-        // Case Two: Right-Left || Elbow Formation
-        else
-        {
-            rightLeftRotation(node);
-        }
+        // We have found a leaf node
+        DFSRemoveHelper(element, node);
     }
-    // If the balance factor is == +2, then we know the tree is not balanced and is right heavy.
-    else if (node->balanceFactor == 2)
+    else if (!foundNode->left)
     {
-        // Check for specfic rotation type by grabbing the balance factor of right child
-        // Case One: Right-Right || Stick Formation
-        if (node->left->balanceFactor > 0)
+        Node *biggestRightNode = retrieveFurthestLeftNodeDFS(foundNode->right);
+        if (!biggestRightNode)
         {
-            rightRotation(node);
+            throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
         }
-        // Greater than 0 means we have a elbow and perform
-        // Case Two: Left-Right || Elbow Formation
-        else
-        {
-            leftRightRotation(node);
-        }
-    }
-}
+        // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
+        // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
+        // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
+        // removal function on that element later.
+        T temp = biggestRightNode->data;
+        biggestRightNode->data = foundNode->data;
+        foundNode->data = temp;
 
-template <typename T>
-void AVLBinaryTree<T>::rootRemover(const T &element, Node *node, const std::string &type)
-{
-    if (type == "DFS" || type == "dfs")
+        DFSRemoveHelper(biggestRightNode->data, node);
+    }
+    // The right side contains the actuall element
+    else if (!foundNode->right)
     {
-        if (!node->left)
-        {
-            Node *foundNode = retrieveFurthestLeftNodeDFS(node->right);
-            T temp = foundNode->data;
-            foundNode->data = node->data;
-            node->data = temp;
 
-            DFSRemoveHelper(foundNode->data, node);
-        }
-        else if (!node->right)
-        {
-            Node *foundNode = retrieveFurthestRightNodeDFS(node->left);
-            T temp = foundNode->data;
-            foundNode->data = node->data;
-            node->data = temp;
+        Node *biggestLeftNode = retrieveFurthestRightNodeDFS(foundNode->left);
 
-            DFSRemoveHelper(foundNode->data, node);
-        }
-        else
+        if (!biggestLeftNode)
         {
-            Node *foundNode = retrieveFurthestRightNodeDFS(node->left);
-            std::cout << "Node to remove: " << node->data << std::endl;
-            std::cout << "Founded node: " << foundNode->data << std::endl;
-            T temp = foundNode->data;
-            foundNode->data = node->data;
-            node->data = temp;
-            DFSRemoveHelper(element, root);
+            throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
         }
+        // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
+        // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
+        // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
+        // removal function on that element later.
+        T temp = biggestLeftNode->data;
+        biggestLeftNode->data = foundNode->data;
+        foundNode->data = temp;
+
+        DFSRemoveHelper(biggestLeftNode->data, node);
     }
-    // Refer to comments in DFS as the same concepts apply here but we will implement most work with a queue instead
-    // instead of an inherited stack.
-    else if (type == "BFS" || type == "bfs")
-    {
-        if (!node->left)
-        {
-            Node *foundNode = retrieveFurthestLeftNodeBFS(node->right);
-            T temp = foundNode->data;
-            foundNode->data = node->data;
-            node->data = temp;
-
-            BFSRemoveHelper(foundNode->data, node);
-        }
-        else if (!node->right)
-        {
-            Node *foundNode = retrieveFurthestRightNodeBFS(node->left);
-            T temp = foundNode->data;
-            foundNode->data = node->data;
-            node->data = temp;
-
-            BFSRemoveHelper(foundNode->data, node);
-        }
-        else
-        {
-            Node *foundNode = retrieveFurthestRightNodeBFS(node->left);
-            std::cout << "Node to remove: " << node->data << std::endl;
-            std::cout << "Founded node: " << foundNode->data << std::endl;
-            T temp = foundNode->data;
-            foundNode->data = node->data;
-            node->data = temp;
-            print(std::cout, "pre");
-            BFSRemoveHelper(element, root);
-            std::cout << "HERE" << std::endl;
-        }
-    }
+    // Node has two children swap so you can swap from any side.
     else
     {
-        std::cout << "MADE IT" << std::endl;
-        throw new std::runtime_error("Error in remove: incorrect type offered. Choose between DFS and BFS");
+        Node *biggestLeftNode = retrieveFurthestLeftNodeDFS(foundNode->right);
+
+        if (!biggestLeftNode)
+        {
+            throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
+        }
+        // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
+        // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
+        // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
+        // removal function on that element later.
+        T temp = biggestLeftNode->data;
+        biggestLeftNode->data = foundNode->data;
+        foundNode->data = temp;
+
+        DFSRemoveHelper(biggestLeftNode->data, node);
     }
-}
-
-template <typename T>
-void AVLBinaryTree<T>::removeHelper(const T &element, Node *root, const std::string &type)
-{
-    if (type == "DFS" || type == "dfs")
-    {
-        // Phase One: Find the parent node of the node designated for removal;
-        Node *foundNode = retrieveNodeDFS(element, root);
-        // Phase Two: Check which side we can swap the data with.
-
-        if (!foundNode->left && !foundNode->right)
-        {
-            // We have found a leaf node
-            DFSRemoveHelper(element, root);
-        }
-
-        else if (!foundNode->left)
-        {
-            Node *biggestRightNode = retrieveFurthestLeftNodeDFS(foundNode->right);
-            if (!biggestRightNode)
-            {
-                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
-            }
-            // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
-            // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
-            // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
-            // removal function on that element later.
-            T temp = biggestRightNode->data;
-            biggestRightNode->data = foundNode->data;
-            foundNode->data = temp;
-
-            DFSRemoveHelper(biggestRightNode->data, root);
-        }
-        // The right side contains the actuall element
-        else if (!foundNode->right)
-        {
-
-            Node *biggestLeftNode = retrieveFurthestRightNodeDFS(foundNode->left);
-
-            if (!biggestLeftNode)
-            {
-                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
-            }
-            // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
-            // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
-            // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
-            // removal function on that element later.
-            T temp = biggestLeftNode->data;
-            biggestLeftNode->data = foundNode->data;
-            foundNode->data = temp;
-
-            DFSRemoveHelper(biggestLeftNode->data, root);
-        }
-        // Node has two children swap so you can swap from any side.
-        else
-        {
-            Node *biggestLeftNode = retrieveFurthestLeftNodeDFS(foundNode->right);
-
-            if (!biggestLeftNode)
-            {
-                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
-            }
-            // Here we are ONLY swapping the data and will not perform pointer manipulation. We only care to remove
-            // the foundNode element from existence while keeping the invariant in tact, therefore swapping foundNode's
-            // data with a leaf node of the biggestLeftNodeParent's right element will allow for use to call a regular
-            // removal function on that element later.
-            T temp = biggestLeftNode->data;
-            biggestLeftNode->data = foundNode->data;
-            foundNode->data = temp;
-
-            DFSRemoveHelper(biggestLeftNode->data, root);
-        }
-    }
-    // Refer to comments in DFS as the same concepts apply here but we will implement most work with a queue instead
-    // instead of an inherited stack.
-    else if (type == "BFS" || type == "bfs")
-    {
-        Node *foundNode = retrieveNodeBFS(element, root);
-
-        if (!foundNode->left && !foundNode->right)
-        {
-            BFSRemoveHelper(element, root);
-        }
-        else if (!foundNode->right)
-        {
-            Node *biggestLeftNode = retrieveFurthestRightNodeBFS(foundNode->left);
-
-            if (!biggestLeftNode)
-            {
-                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
-            }
-            T temp = biggestLeftNode->data;
-            biggestLeftNode->data = foundNode->data;
-            foundNode->data = temp;
-
-            BFSRemoveHelper(biggestLeftNode->data, root);
-        }
-        else if (!foundNode->left)
-        {
-            Node *biggestRightNode = retrieveFurthestLeftNodeBFS(foundNode->right);
-            if (!biggestRightNode)
-            {
-                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
-            }
-            T temp = biggestRightNode->data;
-            biggestRightNode->data = foundNode->data;
-            foundNode->data = temp;
-
-            BFSRemoveHelper(biggestRightNode->data, root);
-        }
-        else
-        {
-            Node *biggestRightNode = retrieveFurthestLeftNodeBFS(foundNode->right);
-            if (!biggestRightNode)
-            {
-                throw new std::runtime_error("Error retrieving parent. Check implementation of parent retrieval.");
-            }
-            T temp = biggestRightNode->data;
-            biggestRightNode->data = foundNode->data;
-            foundNode->data = temp;
-
-            BFSRemoveHelper(biggestRightNode->data, root);
-        }
-    }
-    else
-    {
-        std::cout << "MADE IT" << std::endl;
-        throw new std::runtime_error("Error in remove: incorrect type offered. Choose between DFS and BFS");
-    }
+    Node *temp = checkBalanceAndUpdate(node);
 }
 
 // =========================================================
 // Public Methods
 // =========================================================
 template <typename T>
-void AVLBinaryTree<T>::insert(const T &arg, std::string type)
+void AVLBinaryTree<T>::insert(const T &arg)
 {
+    std::cout << "[IN PROGRESS]: Inserting: " << arg << " ...." << std::endl;
     if (!root)
     {
         Node *newRoot = new Node(arg);
         root = newRoot;
         treeSize++;
+        return;
     }
     else
     {
-        if (type == "DFS")
-        {
-            if (arg > root->data)
-            {
-                root->right = DFSInsertHelper(arg, root->right);
-            }
-            else
-            {
-                root->left = DFSInsertHelper(arg, root->left);
-            }
-        }
-        else if (type == "BFS")
-        {
-            BFSInsertHelper(arg, root);
-        }
-        else
-        {
-            throw new std::runtime_error("Error in insert: Type was not BFS or DFS. Please enter correct type");
-        }
+        root = DFSInsertHelper(arg, root);
     }
 }
 
 template <typename T>
-void AVLBinaryTree<T>::remove(const T &element, std::string type)
+void AVLBinaryTree<T>::remove(const T &arg)
 {
+    std::cout << "[IN PROGRESS]: Removing: " << arg << " ...." << std::endl;
     if (!root)
     {
         return;
@@ -1039,7 +823,7 @@ void AVLBinaryTree<T>::remove(const T &element, std::string type)
 
     else
     {
-        removeHelper(element, root, type);
+        removeHelper(arg, root);
     }
 }
 
@@ -1107,4 +891,58 @@ std::ostream &AVLBinaryTree<T>::print(std::ostream &os, const std::string &type)
     os << "]\n";
 
     return os;
+}
+
+template <typename T>
+bool AVLBinaryTree<T>::equals(const AVLBinaryTree<T> &other) const
+{
+    if (!root || size() != other.size())
+    {
+        return false;
+    }
+
+    std::queue<Node *> queueThis;
+    std::queue<Node *> queueOther;
+
+    queueThis.push(root);
+    queueOther.push(other.root);
+
+    while (!queueThis.empty())
+    {
+        if (queueOther.empty())
+        {
+            return false;
+        }
+        Node *thisNode = queueThis.front();
+        Node *otherNode = queueOther.front();
+        queueThis.pop();
+        queueOther.pop();
+
+        if (thisNode->data != otherNode->data)
+        {
+            return false;
+        }
+
+        if (thisNode->left)
+        {
+            queueThis.push(thisNode->left);
+        }
+
+        if (thisNode->right)
+        {
+            queueThis.push(thisNode->right);
+        }
+
+        if (otherNode->left)
+        {
+            queueOther.push(thisNode->left);
+        }
+
+        if (otherNode->right)
+        {
+            queueOther.push(otherNode->right);
+        }
+    }
+
+    return queueOther.empty() && queueThis.empty();
 }
